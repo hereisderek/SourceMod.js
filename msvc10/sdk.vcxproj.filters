@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="SourceMod SDK">
+      <UniqueIdentifier>{31958233-BB2D-4e41-A8F9-CE8A4684F436}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Modules">
+      <UniqueIdentifier>{3f6d7368-d23f-4b17-8369-1a5de71e45ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public">
+      <UniqueIdentifier>{ca7e35a3-828c-4f7e-b10d-5bac38855aa2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CDetour">
+      <UniqueIdentifier>{394f7baa-6fe4-444c-9fe0-63d5e8bedf6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="clsocket">
+      <UniqueIdentifier>{ae1ad348-37f4-4c4f-9ee5-506ed6fb84a5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\extension.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk\smsdk_ext.cpp">
+      <Filter>SourceMod SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Plugin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MServer.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MClient.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Interfaces.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Entity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_Netprops.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_BaseWrapped.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MGame.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MEntities.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MSocket.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MDota.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CDetour\detours.cpp">
+      <Filter>CDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\asm\asm.c">
+      <Filter>CDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SMJS_EntKeyValues.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MKeyValue.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MPlugin.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="SMJS_SimpleWrapped.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\modules\MConsole.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\extension.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sdk\smsdk_config.h">
+      <Filter>SourceMod SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sdk\smsdk_ext.h">
+      <Filter>SourceMod SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Plugin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dirent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Module.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MConsole.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MServer.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\k7v8macros.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MClient.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Interfaces.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_BaseWrapped.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Netprops.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MGame.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MEntities.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MSocket.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\ISMJS.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\SMJS_BaseWrapped.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\SMJS_Plugin.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\public\ISMJS_config.h">
+      <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MDota.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CDetour\detourhelpers.h">
+      <Filter>CDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CDetour\detours.h">
+      <Filter>CDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\asm\asm.h">
+      <Filter>CDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_EntKeyValues.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MKeyValue.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MPlugin.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_Base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_SimpleWrapped.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clsocket\ActiveSocket.h">
+      <Filter>clsocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clsocket\Host.h">
+      <Filter>clsocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clsocket\PassiveSocket.h">
+      <Filter>clsocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clsocket\SimpleSocket.h">
+      <Filter>clsocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\clsocket\StatTimer.h">
+      <Filter>clsocket</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
