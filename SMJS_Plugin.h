@@ -44,7 +44,7 @@ protected: // Protected variables
 	std::string dir;
 
 	std::vector<DestroyCallback> destroyCallbackFuncs;
-	std::vector<SMJS_BaseWrapped*> destroyCallbackWrappers;
+	std::vector<IPluginDestroyedHandler*> destroyCallbackHandlers;
 	std::map<std::string, std::vector<v8::Persistent<v8::Function>>> hooks;
 
 public: // Public functions
@@ -55,8 +55,8 @@ public: // Public functions
 	virtual v8::Persistent<v8::Context> GetContext(){return context;}
 	virtual v8::Isolate *GetIsolate(){return isolate;}
 	virtual void RegisterDestroyCallback(DestroyCallback func);
-	virtual void RegisterDestroyCallback(SMJS_BaseWrapped *ptr);
-	virtual int GetApiVersion(char const *id, int curVersion){return curVersion;};
+	virtual void RegisterDestroyCallback(IPluginDestroyedHandler *ptr);
+	//virtual int GetApiVersion(char const *id, int curVersion){return curVersion;};
 	virtual std::vector<v8::Persistent<v8::Function>>* GetHooks(char const *type);
 
 	// 

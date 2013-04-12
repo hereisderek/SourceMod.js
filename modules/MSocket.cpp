@@ -45,6 +45,8 @@ public:
 		socket.SetNonblocking();
 
 		g_MSocket->sockets.push_back(this);
+
+		
 	}
 
 	~JSSocket(){
@@ -139,13 +141,16 @@ void MSocket::OnGameFrame(bool simulating){
 		auto &socket = jssocket->socket;
 		
 		auto pl = jssocket->GetPlugin();
+		if(pl == NULL) continue;
+
 		auto context = pl->GetContext();
 		HandleScope handle_scope(pl->GetIsolate());
 		Context::Scope context_scope(context);
 
-		if(socket.IsSocketValid()){
-			while(true){
-				int received = socket.Receive(4096);
+		int received;
+		if(socket.IsSocketValid() && (received = socket.Receive(4096)) >= 0){
+			if(!jssocket->connected) jssocket->connected = true;
+			do{
 				if(received <= 0) break;
 				
 				
@@ -164,7 +169,7 @@ void MSocket::OnGameFrame(bool simulating){
 
 					FreeBuffer(pl->GetIsolate(), buffer);
 				}
-			}
+			}while((received = socket.Receive(4096)) > 0);
 		}else if(jssocket->connected){
 			jssocket->connected = false;
 
@@ -196,7 +201,7 @@ FUNCTION_M(BufferWriteString)
 
 		memcpy(newPtr, ptr, len);
 		delete[] ptr;
-
+		
 		ptr = newPtr;
 		len = newLen;
 	}
@@ -217,9 +222,63 @@ FUNCTION_M(BufferReadString)
 	return v8::String::New((char*)(ptr + offset), len);
 END
 
+FUNCTION_M(BufferMerge)
+	POBJ(other);
+	PINT(offset);
+
+	auto buffer = JS_THIS->ToObject();
+	uint8_t *ptr = (uint8_t*) v8::Handle<v8::External>::Cast(buffer->GetHiddenValue(v8::String::New("SMJS::bufferPtr")))->Value();
+	int bufLen = buffer->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value();
+	
+	if(other->GetHiddenValue(v8::String::New("SMJS::bufferPtr")).IsEmpty()){
+		THROW("Argument must be a buffer");
+	}
+
+	if(offset > bufLen){
+		THROW("Buffer overflow");
+	}
+
+	uint8_t *otherPtr = (uint8_t*) v8::Handle<v8::External>::Cast(other->GetHiddenValue(v8::String::New("SMJS::bufferPtr")))->Value();
+	int otherBufLen = other->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value();
+
+	uint8_t *merged = new uint8_t[bufLen + otherBufLen];
+	memcpy(merged, ptr, bufLen);
+	memcpy((void*)((intptr_t)merged + offset), otherPtr, otherBufLen);
+
+	delete[] ptr;
+	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtr"), v8::External::New(merged));
+	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtrLen"), v8::Int32::New(bufLen + otherBufLen));
+	buffer->SetIndexedPropertiesToExternalArrayData(merged, v8::kExternalUnsignedByteArray, bufLen + otherBufLen);
+
+	GetPluginRunning()->GetIsolate()->AdjustAmountOfExternalAllocatedMemory(otherBufLen);
+
+	RETURN_UNDEF;
+END
+
+FUNCTION_M(BufferRewind)
+	PINT(amount);
+	auto buffer = JS_THIS->ToObject();
+	uint8_t *ptr = (uint8_t*) v8::Handle<v8::External>::Cast(buffer->GetHiddenValue(v8::String::New("SMJS::bufferPtr")))->Value();
+	int bufLen = buffer->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value();
+	
+	if(amount >= bufLen) RETURN_UNDEF;
+
+	uint8_t *cur = (uint8_t*)((intptr_t) ptr + amount);
+	uint8_t *end = (uint8_t*)((intptr_t) ptr + bufLen);
+	int i = 0;
+	while(cur != end){
+		*cur++ = ptr[amount + i];
+		++i;
+	}
+
+	RETURN_UNDEF;
+END
+
 v8::Persistent<v8::Object> CreateBuffer(v8::Isolate *isolate, uint8_t *ptr, size_t len){
 	auto buffer = v8::Persistent<v8::Object>::New(v8::Object::New());
 	
+	buffer->Set(v8::String::New("merge"), v8::FunctionTemplate::New(BufferMerge)->GetFunction());
+	buffer->Set(v8::String::New("rewind"), v8::FunctionTemplate::New(BufferRewind)->GetFunction());
 	buffer->Set(v8::String::New("readString"), v8::FunctionTemplate::New(BufferReadString)->GetFunction());
 	buffer->Set(v8::String::New("writeString"), v8::FunctionTemplate::New(BufferWriteString)->GetFunction());
 	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(len), ReadOnly);

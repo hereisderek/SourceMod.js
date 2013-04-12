@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 
-class SMJS_SimpleWrapped : public SMJS_Base {
+class SMJS_SimpleWrapped : public SMJS_Base, public IPluginDestroyedHandler {
 private:
 	SMJS_SimpleWrapped();
 
@@ -19,15 +19,18 @@ protected:
 
 public:
 
-	SMJS_SimpleWrapped(SMJS_Plugin *pl) : plugin(pl){
-		refCount = 0;
-	}
+	SMJS_SimpleWrapped(SMJS_Plugin *pl);
 
 	virtual void OnWrapperAttached(){};
 
 	virtual v8::Persistent<v8::Value> GetWrapper(){return v8::Persistent<v8::Value>::New(v8::Undefined());};
 
 	void Destroy();
+
+	virtual void OnPluginDestroyed(SMJS_Plugin *plugin){
+		Destroy();
+		this->plugin = NULL;
+	}
 
 	static v8::Persistent<v8::FunctionTemplate> temp;
 

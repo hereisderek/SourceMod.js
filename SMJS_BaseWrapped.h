@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 
-class SMJS_BaseWrapped : public SMJS_Base {
+class SMJS_BaseWrapped : public SMJS_Base, public IPluginDestroyedHandler {
 public:
 	std::unordered_map<PLUGIN_ID, v8::Persistent<v8::Value>> wrappers;
 	int refCount;

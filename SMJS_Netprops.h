@@ -18,15 +18,24 @@
 class SMJS_Entity;
 class SendProp;
 class SMJS_DataTable;
+class SMJS_GameRulesProps;
 
-class SMJS_BaseNetprop {
+class SMJS_NPValueCacher {
 public:
-	SMJS_Entity *entWrapper;
+	std::map<PLUGIN_ID, std::map<std::string, v8::Persistent<v8::Value>>> cachedValues;
+
+protected:
+	void InitCacheForPlugin(SMJS_Plugin *pl);
+	inline void InsertCachedValue(PLUGIN_ID plId, std::string key, v8::Persistent<v8::Value> value);
+	inline v8::Persistent<v8::Value> FindCachedValue(PLUGIN_ID plId, std::string key);
+	v8::Persistent<v8::Value> GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, SendProp *p, size_t offset);
 };
 
-class SMJS_Netprops : public SMJS_BaseWrapped, public SMJS_BaseNetprop {
+class SMJS_Netprops : public SMJS_BaseWrapped, public SMJS_NPValueCacher {
 public:
-	
+	bool valid;
+	void *ent;
+
 	std::map<PLUGIN_ID, std::map<std::string, v8::Persistent<v8::Value>>> cachedValues;
 
 	SMJS_Netprops();
@@ -34,51 +43,29 @@ public:
 
 	void OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper);
 
-	v8::Handle<v8::Value> GetNetProp(const char *prop);
-
 	
 	WRAPPED_CLS(SMJS_Netprops, SMJS_BaseWrapped) {
 		temp->SetClassName(v8::String::New("Netprops"));
 		temp->InstanceTemplate()->SetNamedPropertyHandler(SGetNetProp, SSetNetProp);
 	}
 
+	static bool GetEntityPropInfo(void *ent, const char *propName, sm_sendprop_info_t *propInfo);
+
 protected:
-	inline void InsertCachedValue(PLUGIN_ID plId, std::string key, v8::Persistent<v8::Value> value){
-		auto &vec = cachedValues.find(plId)->second;
-		vec.insert(std::make_pair(key, value));
-	}
-
-	inline v8::Persistent<v8::Value> FindCachedValue(PLUGIN_ID plId, std::string key){
-		auto &vec = cachedValues.find(plId)->second;
-		auto it = vec.find(key);
-		if(it != vec.end()){
-			return it->second;
-		}
-
-		return v8::Persistent<v8::Value>();
-	}
-
-	v8::Persistent<v8::Value> GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, SMJS_Entity *entWrapper, SendProp *p, size_t offset){
-		bool isCacheable;
-		auto res = v8::Persistent<v8::Value>::New(SGetNetProp(entWrapper, p, offset, &isCacheable));
-
-		if(isCacheable){
-			InsertCachedValue(plId, key, res);
-		}
-
-		return res;
-	}
-
 	static v8::Handle<v8::Value> SGetNetProp(v8::Local<v8::String> prop, const v8::AccessorInfo &info);
 	static v8::Handle<v8::Value> SSetNetProp(v8::Local<v8::String> prop, v8::Local<v8::Value> value, const v8::AccessorInfo &info);
 
-	static v8::Handle<v8::Value> SGetNetProp(SMJS_Entity *entWrapper, SendProp *p, size_t offset, bool *isCacheable = NULL);
-	static v8::Handle<v8::Value> SSetNetProp(SMJS_Entity *entWrapper, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache);
+	static v8::Handle<v8::Value> SGetNetProp(void *ent, SendProp *p, size_t offset, bool *isCacheable = NULL, const char *name = NULL, bool notAnEntity = false);
+	static v8::Handle<v8::Value> SSetNetProp(void *ent, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache, const char *name = NULL);
+	
+	friend SMJS_NPValueCacher;
 	friend SMJS_DataTable;
+	friend SMJS_GameRulesProps;
 };
 
-class SMJS_DataTable : public SMJS_SimpleWrapped, public SMJS_BaseNetprop {
+class SMJS_DataTable : public SMJS_SimpleWrapped {
 private:
+	void *ent;
 	SendTable *pTable;
 	size_t offset;
 	std::map<uint32_t, v8::Persistent<v8::Value>> cachedValues;
@@ -88,9 +75,9 @@ private:
 
 	SMJS_DataTable() : SMJS_SimpleWrapped(NULL) {};
 
-	v8::Persistent<v8::Value> GenerateThenFindCachedValue(uint32_t key, SMJS_Entity *entWrapper, SendProp *p, size_t offset){
+	v8::Persistent<v8::Value> GenerateThenFindCachedValue(uint32_t key, void *ent, SendProp *p, size_t offset){
 		bool isCacheable;
-		auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(entWrapper, p, offset, &isCacheable));
+		auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(ent, p, offset, &isCacheable));
 
 		if(isCacheable){
 			cachedValues.insert(std::make_pair(key, res));
@@ -102,12 +89,13 @@ private:
 public:
 
 
-	SMJS_DataTable(SMJS_Plugin *pl, SMJS_Entity *_entWrapper, SendTable *_pTable, size_t _offset) : SMJS_SimpleWrapped(pl), pTable(_pTable), offset(_offset){
-		entWrapper = _entWrapper;
+	SMJS_DataTable(SMJS_Plugin *pl, void *_ent, SendTable *_pTable, size_t _offset) : SMJS_SimpleWrapped(pl), pTable(_pTable), offset(_offset){
+		ent = _ent;
 	}
 
 	SIMPLE_WRAPPED_CLS(SMJS_DataTable, SMJS_SimpleWrapped){
-		proto->SetIndexedPropertyHandler(DTGetter, DTSetter, NULL, NULL, NULL);
+		temp->SetClassName(v8::String::New("DataTable"));
+		temp->InstanceTemplate()->SetIndexedPropertyHandler(DTGetter, DTSetter, NULL, NULL, NULL);
 	}
 
 	void OnWrapperAttached(){

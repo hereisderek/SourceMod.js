@@ -495,7 +495,7 @@
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>LIBC;LIBCD;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -1173,6 +1173,8 @@
     <ClCompile Include="..\SMJS_Client.cpp" />
     <ClCompile Include="..\SMJS_Entity.cpp" />
     <ClCompile Include="..\SMJS_EntKeyValues.cpp" />
+    <ClCompile Include="..\SMJS_GameRules.cpp" />
+    <ClCompile Include="..\SMJS_GameRulesProps.cpp" />
     <ClCompile Include="..\SMJS_Interfaces.cpp" />
     <ClCompile Include="..\SMJS_Module.cpp" />
     <ClCompile Include="..\SMJS_Netprops.cpp" />
@@ -1212,6 +1214,8 @@
     <ClInclude Include="..\sdk\smsdk_ext.h" />
     <ClInclude Include="..\SMJS_Entity.h" />
     <ClInclude Include="..\SMJS_EntKeyValues.h" />
+    <ClInclude Include="..\SMJS_GameRules.h" />
+    <ClInclude Include="..\SMJS_GameRulesProps.h" />
     <ClInclude Include="..\SMJS_Interfaces.h" />
     <ClInclude Include="..\SMJS_Module.h" />
     <ClInclude Include="..\SMJS_Netprops.h" />

@@ -6,11 +6,7 @@
 WRAPPED_CLS_CPP(MConsole, SMJS_Module)
 
 
-#if SOURCE_ENGINE >= SE_ORANGEBOX
-	SH_DECL_HOOK1_void(ConCommand, Dispatch, SH_NOATTRIB, false, const CCommand &);
-#else
-	SH_DECL_HOOK0_void(ConCommand, Dispatch, SH_NOATTRIB, false);
-#endif
+SH_DECL_HOOK1_void(ConCommand, Dispatch, SH_NOATTRIB, false, const CCommand &);
 
 SH_DECL_HOOK1_void(IServerGameClients, SetCommandClient, SH_NOATTRIB, false, int);
 
@@ -61,17 +57,21 @@ bool safestrcat(char *buffer, size_t maxSize, const char *addition){
 }
 
 void MConsole::OnSayCommand_Pre(const CCommand &command){
-	if(strcmp(command.Arg(0), "say") != 0 || strcmp(command.Arg(0), "say_team")){
+	if(strcmp(command.Arg(0), "say") != 0 && strcmp(command.Arg(0), "say_team")){
 		return;
 	}
 
 	int client = g_MConsole->cmdClient;
 	auto player = playerhelpers->GetGamePlayer(client);
 
+
 	if(client == 0 || player == NULL) RETURN_META(MRES_IGNORED);
 	if(!player->IsConnected()) RETURN_META(MRES_IGNORED);
 
+
 	const char *argsTmp = command.ArgS();
+	if(argsTmp == NULL) RETURN_META(MRES_IGNORED);
+
 	char *args = (char*) alloca(strlen(argsTmp) + 1);
 	strcpy(args, argsTmp);
 
@@ -82,7 +82,7 @@ void MConsole::OnSayCommand_Pre(const CCommand &command){
 		if(args[len - 1] == '"') args[len - 1] = '\0';
 	}
 
-	if(args == NULL) RETURN_META(MRES_IGNORED);
+	
 
 	bool isTrigger = false;
 	bool isSilent = false;
@@ -133,7 +133,6 @@ void MConsole::OnSayCommand_Pre(const CCommand &command){
 		}
 
 		argArray[numArgs - 1][curArgPos] = '\0';
-
 
 		if(g_MConsole->InvokePluginsCommand(client, curArgPos == 0 ? numArgs - 1 : numArgs, (const char **) argArray, args) && isSilent){
 			for(int i = 0; i < numArgs; ++i) delete[] argArray[i];

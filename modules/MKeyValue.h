@@ -11,12 +11,13 @@ public:
 
 
 	FUNCTION_DECL(parseKVFile);
+	FUNCTION_DECL(parse);
 
 	WRAPPED_CLS(MKeyValue, SMJS_Module) {
 		temp->SetClassName(v8::String::New("KeyValueModule"));
 
 		WRAPPED_FUNC(parseKVFile);
-		
+		WRAPPED_FUNC(parse);
 	}
 
 	

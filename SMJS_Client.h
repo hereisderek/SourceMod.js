@@ -10,11 +10,15 @@ public:
 	bool inGame;
 	edict_t *edict;
 	int authStage;
+	bool connected;
 
 	SMJS_Client(edict_t *edict);
 	void OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper);
 	void ReattachEntity();
 
+	virtual void Destroy(){
+		edict = NULL;
+	}
 
 	FUNCTION_DECL(printToChat);
 	FUNCTION_DECL(printToConsole);

@@ -46,7 +46,6 @@
 #include "metamod.h"
 #include "SMJS_Interfaces.h"
 
-
 /**
  * @file extension.cpp
  * @brief Implement extension code here.
@@ -116,6 +115,8 @@ bool LoadTrustedList(){
 	smutils->BuildPath(Path_SM, trustedListPath, sizeof(trustedListPath), "plugins.js/trusted.txt");
 
 	FILE *trustedListFile = fopen(trustedListPath, "r");
+	if(trustedListFile == NULL) return false;
+
 	char line[256];
 	bool allSuccess = true;
 	while(fgets(line, sizeof(line), trustedListFile) != NULL){
@@ -161,6 +162,8 @@ bool FindAndRunAutoloadPlugins(){
 	smutils->BuildPath(Path_SM, autoloadPath, sizeof(autoloadPath), "plugins.js/autoload.txt");
 
 	FILE *autoloadFile = fopen(autoloadPath, "r");
+	if(autoloadFile == NULL) return false;
+
 	char line[256];
 	bool allSuccess = true;
 	while(fgets(line, sizeof(line), autoloadFile) != NULL){
@@ -207,12 +210,30 @@ SMJS_Plugin *LoadPlugin(const char *dir){
 		return NULL;
 	}
 
+	// Late loading
 	if(smutils->IsMapRunning()){
 		auto hooks = plugin->GetHooks("OnMapStart");
 		HandleScope handle_scope(plugin->GetIsolate());
 		Context::Scope context_scope(plugin->GetContext());
 		for(auto it = hooks->begin(); it != hooks->end(); ++it){
 			(*it)->Call(plugin->GetContext()->Global(), 0, NULL);
+		}
+
+		for(int i = 0; i < sizeof(clients) / sizeof(clients[0]); ++i){
+			if(clients[i] == NULL) continue;
+			v8::Handle<v8::Value> arg = clients[i]->GetWrapper(plugin);
+
+			hooks = plugin->GetHooks("OnClientConnected");
+			for(auto it = hooks->begin(); it != hooks->end(); ++it){
+				(*it)->Call(plugin->GetContext()->Global(), 1, &arg);
+			}
+
+			if(clients[i]->inGame){
+				hooks = plugin->GetHooks("OnClientPutInGame");
+				for(auto it = hooks->begin(); it != hooks->end(); ++it){
+					(*it)->Call(plugin->GetContext()->Global(), 1, &arg);
+				}
+			}
 		}
 	}
 

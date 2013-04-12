@@ -38,6 +38,20 @@ FUNCTION_M(MServer::execute)
 	return JS_undefined;
 END
 
+FUNCTION_M(MServer::getPort)
+	ARG_COUNT(0);
+	auto cvar = icvar->FindVar("hostport");
+	if(cvar == NULL) return JS_undefined;
+	return v8::Int32::New(cvar->GetInt());
+END
+
+FUNCTION_M(MServer::getIP)
+	ARG_COUNT(0);
+	auto cvar = icvar->FindVar("ip");
+	if(cvar == NULL) return JS_undefined;
+	return v8::String::New(cvar->GetString());
+END
+
 class ClientArray : public SMJS_BaseWrapped {
 public:
 
@@ -52,8 +66,9 @@ public:
 	}
 
 	static v8::Handle<v8::Value> GetClient(uint32_t index, const AccessorInfo& info){
-		if(index < 0 || index >= 65) return v8::Undefined();
-		if(clients[index] == NULL) return v8::Undefined();
+		if(index >= 65) return v8::Undefined();
+		if(index == 0) return v8::Null();
+		if(clients[index] == NULL) return v8::Null();
 		return clients[index]->GetWrapper(GetPluginRunning());
 	}
 };

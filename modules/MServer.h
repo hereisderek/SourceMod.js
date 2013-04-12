@@ -13,6 +13,8 @@ public:
 	FUNCTION_DECL(print);
 	FUNCTION_DECL(command);
 	FUNCTION_DECL(execute);
+	FUNCTION_DECL(getPort);
+	FUNCTION_DECL(getIP);
 
 	WRAPPED_CLS(MServer, SMJS_Module) {
 		temp->SetClassName(v8::String::New("ServerModule"));
@@ -23,5 +25,7 @@ public:
 		WRAPPED_FUNC(print);
 		WRAPPED_FUNC(command);
 		WRAPPED_FUNC(execute);
+		WRAPPED_FUNC(getPort);
+		WRAPPED_FUNC(getIP);
 	}
 };

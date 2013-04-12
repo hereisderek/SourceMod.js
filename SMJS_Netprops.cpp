@@ -8,23 +8,48 @@
 WRAPPED_CLS_CPP(SMJS_Netprops, SMJS_BaseWrapped)
 
 struct SMJS_Netprops_CachedValueData {
-	SMJS_Entity *entWrapper;
+	void *ent;
 	void *addr;
 	edict_t *edict;
 	size_t actual_offset;
 	SendProp *prop;
 };
 
-struct SMJS_Netprops_CachedDataTable : public SMJS_Netprops_CachedValueData {
-	SendTable *pTable;
-};
-
 void DestroyDataCallback(Isolate* isolate, v8::Persistent<v8::Value> object, void *parameter){
 	delete parameter;
 }
 
+
+void SMJS_NPValueCacher::InsertCachedValue(PLUGIN_ID plId, std::string key, v8::Persistent<v8::Value> value){
+	auto &vec = cachedValues.find(plId)->second;
+	vec.insert(std::make_pair(key, value));
+}
+
+v8::Persistent<v8::Value> SMJS_NPValueCacher::FindCachedValue(PLUGIN_ID plId, std::string key){
+	auto &vec = cachedValues.find(plId)->second;
+	auto it = vec.find(key);
+	if(it != vec.end()){
+		return it->second;
+	}
+
+	return v8::Persistent<v8::Value>();
+}
+void SMJS_NPValueCacher::InitCacheForPlugin(SMJS_Plugin *pl){
+	cachedValues.insert(std::make_pair(pl->id, std::map<std::string, v8::Persistent<v8::Value>>()));
+}
+v8::Persistent<v8::Value> SMJS_NPValueCacher::GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, SendProp *p, size_t offset){
+	bool isCacheable;
+	auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(ent, p, offset, &isCacheable));
+
+	if(isCacheable){
+		InsertCachedValue(plId, key, res);
+	}
+
+	return res;
+}
+
 SMJS_Netprops::SMJS_Netprops() {
-	
+	valid = true;
 }
 
 SMJS_Netprops::~SMJS_Netprops(){
@@ -45,13 +70,13 @@ SMJS_Netprops::~SMJS_Netprops(){
 
 void SMJS_Netprops::OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper){
 	SMJS_BaseWrapped::OnWrapperAttached(plugin, wrapper);
+	InitCacheForPlugin(plugin);
 	cachedValues.insert(std::make_pair(plugin->id, std::map<std::string, v8::Persistent<v8::Value>>()));
 }
 
 v8::Handle<v8::Value> VectorGetter(Local<String> prop,  const AccessorInfo& info){
 	SMJS_Netprops_CachedValueData *data = (SMJS_Netprops_CachedValueData *) v8::Handle<External>::Cast(info.Data())->Value();
-	if(!data->entWrapper->valid) return v8::Undefined();
-
+	
 	Vector *vec = (Vector*)data->addr;
 	if(prop == v8::String::New("x")){
 		return v8::Number::New(vec->x);
@@ -66,8 +91,7 @@ v8::Handle<v8::Value> VectorGetter(Local<String> prop,  const AccessorInfo& info
 
 void VectorSetter(Local<String> prop, Local<Value> value, const AccessorInfo& info){
 	SMJS_Netprops_CachedValueData *data = (SMJS_Netprops_CachedValueData *) v8::Handle<External>::Cast(info.Data())->Value();
-	if(!data->entWrapper->valid) return;
-
+	
 	Vector *vec = (Vector*)data->addr;
 	if(prop == v8::String::New("x")){
 		vec->x = value->ToNumber()->NumberValue();
@@ -77,7 +101,7 @@ void VectorSetter(Local<String> prop, Local<Value> value, const AccessorInfo& in
 		vec->z = value->ToNumber()->NumberValue();
 	}
 
-	gamehelpers->SetEdictStateChanged(data->edict, data->actual_offset);
+	if(data->edict != NULL) gamehelpers->SetEdictStateChanged(data->edict, data->actual_offset);
 }
 
 v8::Handle<v8::Value> VectorToString(const v8::Arguments& args) {
@@ -105,12 +129,51 @@ unsigned int strncopy(char *dest, const char *src, size_t count){
 	return (dest - start);
 }
 
+bool SMJS_Netprops::GetEntityPropInfo(void *ent, const char *propName, sm_sendprop_info_t *propInfo){
+	IServerUnknown *pUnk = (IServerUnknown *)ent;
+	IServerNetworkable *pNet = pUnk->GetNetworkable();
+	if(!pNet) return false;
+
+	edict_t *edict = pNet->GetEdict();
+	
+	return gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), propName, propInfo);
+}
+
 v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(v8::Local<v8::String> prop, const v8::AccessorInfo &info){
 	Local<Value> _intfld = info.This()->GetInternalField(0); 
 	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
 
+	if(!self->valid) return v8::Undefined();
+
 	v8::String::AsciiValue str(prop);
-	return self->GetNetProp(*str);
+	
+	std::string propNameStdString(*str);
+
+	auto cachedValue = self->FindCachedValue(GetPluginRunning()->id, propNameStdString);
+	if(!cachedValue.IsEmpty()) return cachedValue;
+
+	sm_sendprop_info_t propInfo;
+	
+	IServerUnknown *pUnk = (IServerUnknown *)self->ent;
+	IServerNetworkable *pNet = pUnk->GetNetworkable();
+	if(!pNet){
+		THROW("Entity is not networkable");
+	}
+
+	edict_t *edict = pNet->GetEdict();
+	
+	if(!gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), *str, &propInfo)){
+		return v8::Undefined();
+	}
+
+	bool isCacheable;
+	auto ret = SGetNetProp(self->ent, propInfo.prop, propInfo.actual_offset, &isCacheable, NULL);
+
+	if(isCacheable){
+		self->InsertCachedValue(GetPluginRunning()->id, propNameStdString, v8::Persistent<v8::Value>::New(ret));
+	}
+
+	return ret;
 }
 
 
@@ -118,12 +181,12 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(v8::Local<v8::String> prop, v8:
 	Local<Value> _intfld = info.This()->GetInternalField(0); 
 	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
 
-	if(!self->entWrapper->valid) return v8::Undefined();
+	if(!self->valid) return v8::Undefined();
 	
 	std::string propNameStdString(*v8::String::AsciiValue(prop));
 	sm_sendprop_info_t propInfo;
 	
-	IServerUnknown *pUnk = (IServerUnknown *)self->entWrapper->ent;
+	IServerUnknown *pUnk = (IServerUnknown *)self->ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
 	if(!pNet){
 		THROW("Entity is not networkable");
@@ -136,33 +199,33 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(v8::Local<v8::String> prop, v8:
 		return v8::Undefined();
 	}
 
-	//GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, SMJS_Entity *entWrapper, SendProp *p, size_t offset)
-	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_Netprops::GenerateThenFindCachedValue, self, GetPluginRunning()->id, propNameStdString, self->entWrapper, propInfo.prop, propInfo.actual_offset));
+	//GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, SendProp *p, size_t offset)
+	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_Netprops::GenerateThenFindCachedValue, self, GetPluginRunning()->id, propNameStdString, self->ent, propInfo.prop, propInfo.actual_offset));
 
-	return SSetNetProp(self->entWrapper, propInfo.prop, propInfo.actual_offset, value, f);
+	return SSetNetProp(self->ent, propInfo.prop, propInfo.actual_offset, value, f);
 }
 
-v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(SMJS_Entity *entWrapper, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache){
-	std::string propNameStdString(p->GetName());
+v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache, const char *name){
+	std::string propNameStdString(name != NULL ? name : p->GetName());
 
-	IServerUnknown *pUnk = (IServerUnknown *)entWrapper->ent;
+	IServerUnknown *pUnk = (IServerUnknown *)ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
-	if(!pNet){
-		THROW("Entity is not networkable");
-	}
+	edict_t *edict;
 
-	edict_t *edict = pNet->GetEdict();
+	if(pNet){
+		edict = pNet->GetEdict();
+	}
 
 	int bit_count = p->m_nBits;
 	bool is_unsigned = ((p->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
-	void *addr = (void*) ((intptr_t) entWrapper->ent + offset);
+	void *addr = (void*) ((intptr_t) ent + offset);
 
 
 	switch(p->GetType()){
 	case DPT_Int: {
 		// If it's an integer with 21 bits and starts with m_h, it MUST be an entity, if it's not...
 		//  oh well... return an integer
-		if(bit_count == 21 && strlen(p->GetName()) >= 3 && std::strncmp(propNameStdString.c_str(), "m_h", 3) == 0){
+		if(bit_count == 21 && strlen(propNameStdString.c_str()) >= 3 && std::strncmp(propNameStdString.c_str(), "m_h", 3) == 0){
 			CBaseHandle &hndl = *(CBaseHandle *)addr;
 			if(value->IsNull() || value->IsUndefined()){
 				hndl.Set(NULL);
@@ -184,6 +247,20 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(SMJS_Entity *entWrapper, SendPr
 		
 		if (bit_count < 1){
 			*(int32_t * )addr = value->ToInt32()->Int32Value();
+		}else if (bit_count > 32){
+			if(!value->IsArray()) THROW("Value must be an array");
+			auto obj = value->ToObject();
+
+			if(obj->Get(v8::String::New("length"))->Uint32Value() != 2) THROW("Value must be an array with 2 elements");
+
+			auto lowBits = obj->Get(0);
+			auto highBits = obj->Get(1);
+			
+			if(!lowBits->IsInt32() || !highBits->IsInt32()) THROW("Value must be an array with 2 int32 elements");
+
+
+			*(uint32_t * )addr = lowBits->Uint32Value();
+			*(uint32_t * )((intptr_t) addr + 4) = highBits->ToInt32()->Uint32Value();
 		}else if (bit_count >= 17){
 			*(int32_t * )addr = value->ToInt32()->Int32Value();
 		}else if (bit_count >= 9){
@@ -201,8 +278,6 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(SMJS_Entity *entWrapper, SendPr
 		}else{
 			*(bool *)addr = value->BooleanValue();
 		}
-
-		*(int32_t * )addr = value->ToInt32()->Int32Value();
 	}; break;
 	case DPT_Float:
 		*(float*)addr = (float) value->ToNumber()->NumberValue();
@@ -216,7 +291,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(SMJS_Entity *entWrapper, SendPr
 
 		auto tmp = getCache();
 		if(tmp.IsEmpty()){
-			SGetNetProp(entWrapper, p, offset, NULL);
+			SGetNetProp(ent, p, offset, NULL);
 			tmp = getCache();
 		}
 
@@ -236,57 +311,28 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(SMJS_Entity *entWrapper, SendPr
 	default: THROW("Invalid Netprop Type");
 	}
 
-	gamehelpers->SetEdictStateChanged(edict, offset);
+	if(edict != NULL) gamehelpers->SetEdictStateChanged(edict, offset);
 	return value;
 }
 
-v8::Handle<v8::Value> SMJS_Netprops::GetNetProp(const char *prop){
-	if(!entWrapper->valid) return v8::Undefined();
+v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, SendProp *p, size_t offset, bool *isCacheable, const char *name, bool notAnEntity){
+	std::string propNameStdString(name != NULL ? name : p->GetName());
 	
-	std::string propNameStdString(prop);
+	IServerUnknown *pUnk;
+	IServerNetworkable *pNet;
+	edict_t *edict;
 
-	auto cachedValue = FindCachedValue(GetPluginRunning()->id, propNameStdString);
-	if(!cachedValue.IsEmpty()) return cachedValue;
-
-	sm_sendprop_info_t propInfo;
-	
-	IServerUnknown *pUnk = (IServerUnknown *)entWrapper->ent;
-	IServerNetworkable *pNet = pUnk->GetNetworkable();
-	if(!pNet){
-		THROW("Entity is not networkable");
+	if(!notAnEntity){
+		pUnk = (IServerUnknown *) ent;
+		pNet = pUnk->GetNetworkable();
+		if(pNet){
+			edict = pNet->GetEdict();
+		}
 	}
-
-	edict_t *edict = pNet->GetEdict();
 	
-	if(!gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), prop, &propInfo)){
-		return v8::Undefined();
-	}
-
-	bool isCacheable;
-	auto ret = SGetNetProp(entWrapper, propInfo.prop, propInfo.actual_offset, &isCacheable);
-
-	if(isCacheable){
-		InsertCachedValue(GetPluginRunning()->id, propNameStdString, v8::Persistent<v8::Value>::New(ret));
-	}
-
-	return ret;
-}
-
-v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(SMJS_Entity *entWrapper, SendProp *p, size_t offset, bool *isCacheable){
-	if(!entWrapper->valid) return v8::Undefined();
-	
-	std::string propNameStdString(p->GetName());
-	
-	IServerUnknown *pUnk = (IServerUnknown *)entWrapper->ent;
-	IServerNetworkable *pNet = pUnk->GetNetworkable();
-	if(!pNet){
-		THROW("Entity is not networkable");
-	}
-
-	edict_t *edict = pNet->GetEdict();
 	int bit_count = p->m_nBits;
 	bool is_unsigned = ((p->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
-	void *addr = (void*) ((intptr_t) entWrapper->ent + offset);
+	void *addr = (void*) ((intptr_t) ent + offset);
 
 	if(isCacheable != NULL) *isCacheable = false;
 
@@ -295,7 +341,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(SMJS_Entity *entWrapper, SendPr
 		int v;
 		// If it's an integer with 21 bits and starts with m_h, it MUST be an entity, if it's not...
 		//  oh well... return an integer
-		if(bit_count == 21 && strlen(p->GetName()) >= 3 && std::strncmp(propNameStdString.c_str(), "m_h", 3) == 0){
+		if(bit_count == 21 && strlen(propNameStdString.c_str()) >= 3 && std::strncmp(propNameStdString.c_str(), "m_h", 3) == 0){
 			CBaseHandle &hndl = *(CBaseHandle *)addr;
 			CBaseEntity *pHandleEntity = gamehelpers->ReferenceToEntity(hndl.GetEntryIndex());
 			
@@ -309,6 +355,11 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(SMJS_Entity *entWrapper, SendPr
 		
 		if (bit_count < 1){
 			v = *(int32_t * )addr;
+		}else if(bit_count > 32){
+			auto arr = v8::Array::New(2);
+			arr->Set(0, v8::Int32::New(*(uint32_t * )addr));
+			arr->Set(1, v8::Int32::New(*(uint32_t * )((intptr_t) addr + 4)));
+			return arr;
 		}else if (bit_count >= 17){
 			v = *(int32_t *) addr;
 		}else if (bit_count >= 9){
@@ -326,13 +377,14 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(SMJS_Entity *entWrapper, SendPr
 		}else{
 			return v8::Boolean::New((*(bool *)addr));
 		}
+
 		return v8::Int32::New(v);
 	}; break;
 	case DPT_Float: return v8::Number::New(*(float*)addr);
 	case DPT_Vector: {
 		auto obj = v8::Object::New();
 		auto data = new SMJS_Netprops_CachedValueData();
-		data->entWrapper = entWrapper;
+		data->ent = ent;
 		data->addr = addr;
 		data->actual_offset = offset;
 		data->edict = edict;
@@ -354,10 +406,10 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(SMJS_Entity *entWrapper, SendPr
 	case DPT_DataTable: {
 		SendTable *pTable = p->GetDataTable();
 		if (!pTable){
-			THROW_VERB("Error looking up DataTable for prop %s", p->GetName());
+			THROW_VERB("Error looking up DataTable for prop %s", name != NULL ? name : p->GetName());
 		}
 
-		SMJS_DataTable *table = new SMJS_DataTable(GetPluginRunning(), entWrapper, pTable, offset);
+		SMJS_DataTable *table = new SMJS_DataTable(GetPluginRunning(), ent, pTable, offset);
 		if(isCacheable != NULL) *isCacheable = true;
 		return table->GetWrapper();
 	}break;
@@ -372,7 +424,6 @@ SIMPLE_WRAPPED_CLS_CPP(SMJS_DataTable, SMJS_SimpleWrapped);
 
 v8::Handle<v8::Value> SMJS_DataTable::DTGetter(uint32_t index, const AccessorInfo& info){
 	SMJS_DataTable *self = (SMJS_DataTable*) v8::Handle<v8::External>::Cast(info.This()->GetInternalField(0))->Value();
-	if(!self->entWrapper->valid) return v8::Undefined();
 
 	// Index can't be < 0, don't even test for it
 	if(index >= (uint32_t) self->pTable->GetNumProps()) THROW_VERB("Index %d out of bounds", index);
@@ -385,7 +436,7 @@ v8::Handle<v8::Value> SMJS_DataTable::DTGetter(uint32_t index, const AccessorInf
 	auto pProp = self->pTable->GetProp(index);
 
 	bool isCacheable;
-	auto res = SMJS_Netprops::SGetNetProp(self->entWrapper, pProp, self->offset + pProp->GetOffset(), &isCacheable);
+	auto res = SMJS_Netprops::SGetNetProp(self->ent, pProp, self->offset + pProp->GetOffset(), &isCacheable, self->pTable->GetName());
 	if(isCacheable){
 		self->cachedValues.insert(std::make_pair(index, res));
 	}
@@ -395,12 +446,11 @@ v8::Handle<v8::Value> SMJS_DataTable::DTGetter(uint32_t index, const AccessorInf
 
 v8::Handle<v8::Value> SMJS_DataTable::DTSetter(uint32_t index, Local<Value> value, const AccessorInfo& info){
 	SMJS_DataTable *self = (SMJS_DataTable*) v8::Handle<v8::External>::Cast(info.This()->GetInternalField(0))->Value();
-	if(!self->entWrapper->valid) return v8::Undefined();
 
 	if(index >= (uint32_t) self->pTable->GetNumProps()) THROW_VERB("Index %d out of bounds", index);
 
 	auto pProp = self->pTable->GetProp(index);
-	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_DataTable::GenerateThenFindCachedValue, self, index, self->entWrapper, pProp, self->offset + pProp->GetOffset()));
+	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_DataTable::GenerateThenFindCachedValue, self, index, self->ent, pProp, self->offset + pProp->GetOffset()));
 
-	return SMJS_Netprops::SSetNetProp(self->entWrapper, pProp, self->offset + pProp->GetOffset(), value, f);
+	return SMJS_Netprops::SSetNetProp(self->ent, pProp, self->offset + pProp->GetOffset(), value, f, self->pTable->GetName());
 }

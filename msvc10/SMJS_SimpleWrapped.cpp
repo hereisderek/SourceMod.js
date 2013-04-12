@@ -14,6 +14,11 @@ void SimpleDecWrappedRefCount(Isolate* isolate, v8::Persistent<v8::Value> object
     object.Clear();
 }
 
+SMJS_SimpleWrapped::SMJS_SimpleWrapped(SMJS_Plugin *pl) : plugin(pl){
+	refCount = 0;
+	plugin->RegisterDestroyCallback(this);
+}
+
 void SMJS_SimpleWrapped::Destroy(){
 	if(refCount == 0){
 		delete this;

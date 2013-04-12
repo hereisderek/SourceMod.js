@@ -5,9 +5,13 @@
 #include "MEntities.h"
 #include "MSocket.h"
 #include "SMJS_Interfaces.h"
+#include "SMJS_GameRules.h"
 
+SH_DECL_HOOK6(IServerGameDLL, LevelInit, SH_NOATTRIB, false, bool, const char *, const char *, const char *, const char *, bool, bool);
+SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, false);
 SH_DECL_HOOK3_void(IServerGameDLL, ServerActivate, SH_NOATTRIB, 0, edict_t *, int, int);
 SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
+
 
 WRAPPED_CLS_CPP(MGame, SMJS_Module)
 
@@ -26,12 +30,14 @@ MGame::MGame(){
 	SH_ADD_HOOK(IServerGameDLL, ServerActivate, gamedll, SH_MEMBER(this, &MGame::OnPreServerActivate), false);
 	SH_ADD_HOOK(IServerGameDLL, ServerActivate, gamedll, SH_MEMBER(this, &MGame::OnServerActivate), true);
 	SH_ADD_HOOK(IServerGameDLL, Think, gamedll, SH_MEMBER(this, &MGame::OnThink), true);
+	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_STATIC(MGame::LevelShutdown), false);
 	smutils->AddGameFrameHook(MGame::OnGameFrame);
 }
 
 void MGame::OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper){
 	auto obj = wrapper->ToObject();
 	
+	obj->Set(v8::String::New("rules"), rules.GetWrapper(plugin));
 }
 
 void MGame::OnPreServerActivate(edict_t *pEdictList, int edictCount, int clientMax){
@@ -41,7 +47,14 @@ void MGame::OnPreServerActivate(edict_t *pEdictList, int edictCount, int clientM
 void MGame::OnServerActivate(edict_t *pEdictList, int edictCount, int clientMax){
 	InitTeamNatives();
 
+	self->rules.rulesProps.proxy = FindEntityByClassname(-1, "dota_gamerules");
+	self->rules.rulesProps.gamerules = sdkTools->GetGameRules();
+
 	self->CallGlobalFunction("OnMapStart");
+}
+
+void MGame::LevelShutdown(){
+	ClearEntityWrappers();
 }
 
 void MGame::OnGameFrame(bool simulating){
@@ -107,7 +120,7 @@ void MGame::InitTeamNatives(){
 	}
 }
 
-v8::Handle<v8::Value> MGame::NativeFindEntityByClassname(int startIndex, char *searchname){
+CBaseEntity* MGame::NativeFindEntityByClassname(int startIndex, char *searchname){
 	CBaseEntity *pEntity;
 
 	if (startIndex == -1){
@@ -115,13 +128,13 @@ v8::Handle<v8::Value> MGame::NativeFindEntityByClassname(int startIndex, char *s
 	}else{
 		pEntity = gamehelpers->ReferenceToEntity(startIndex);
 		if (!pEntity){
-			THROW_VERB("Entity %d (%d) is invalid", gamehelpers->ReferenceToIndex(startIndex), startIndex);
+			return NULL;
 		}
 
 		pEntity = (CBaseEntity *)serverTools->NextEntity(pEntity);
 	}
 
-	if (!pEntity) return v8::Null();
+	if (!pEntity) return NULL;
 
 	const char *classname;
 	int lastletterpos = strlen(searchname) - 1;
@@ -146,19 +159,19 @@ v8::Handle<v8::Value> MGame::NativeFindEntityByClassname(int startIndex, char *s
 		if (searchname[lastletterpos] == '*'){
 			if (strncasecmp(searchname, classname, lastletterpos) == 0)
 			{
-				return GetEntityWrapper(gamehelpers->EntityToBCompatRef(pEntity))->GetWrapper(GetPluginRunning());
+				return pEntity;
 			}
 		}else if (strcasecmp(searchname, classname) == 0){
-			return GetEntityWrapper(gamehelpers->EntityToBCompatRef(pEntity))->GetWrapper(GetPluginRunning());
+			return pEntity;
 		}
 
 		pEntity = (CBaseEntity *)serverTools->NextEntity(pEntity);
 	}
 
-	return v8::Null();
+	return NULL;
 }
 
-v8::Handle<v8::Value> MGame::FindEntityByClassname(int startIndex, char *searchname){
+CBaseEntity* MGame::FindEntityByClassname(int startIndex, char *searchname){
 	return NativeFindEntityByClassname(startIndex, searchname);
 }
 
@@ -203,13 +216,20 @@ FUNCTION_M(MGame::findEntityByClassname)
 	ARG_COUNT(2);
 	PINT(startIndex);
 	PSTR(searchname);
-	return FindEntityByClassname(startIndex, *searchname);
+
+	if(startIndex != -1 && !gamehelpers->ReferenceToEntity(startIndex)){
+		THROW_VERB("Entity %d is invalid", startIndex);
+	}
+
+	CBaseEntity *ent = FindEntityByClassname(startIndex, *searchname);
+
+	if(ent == NULL){
+		return v8::Null();
+	}
+
+	return GetEntityWrapper(ent)->GetWrapper(GetPluginRunning());
 END
 
-
-FUNCTION_M(MGame::getGameRules)
-	if(sdkTools == NULL) return v8::Null();
-	auto gameRules = (CBaseEntity*) sdkTools->GetGameRules();
-	if(gameRules == NULL) return v8::Null();
-	return GetEntityWrapper(gameRules)->GetWrapper(GetPluginRunning());
+FUNCTION_M(MGame::getTime)
+	return v8::Number::New(gpGlobals->curtime);
 END

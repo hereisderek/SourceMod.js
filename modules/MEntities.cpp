@@ -7,11 +7,15 @@ WRAPPED_CLS_CPP(MEntities, SMJS_Module);
 
 std::unordered_map<cell_t, SMJS_Entity*> refs;
 SMJS_Entity* GetEntityWrapper(int32_t ref){
+	if(ref == -1) return NULL;
+
 	auto it = refs.find(ref);
 	if(it != refs.end()) return it->second;
 
 
 	CBaseEntity *pEntity = gamehelpers->ReferenceToEntity(ref);
+
+	if(pEntity == NULL) return NULL;
 
 	IServerUnknown *pUnk = (IServerUnknown *)pEntity;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
@@ -22,6 +26,8 @@ SMJS_Entity* GetEntityWrapper(int32_t ref){
 }
 
 SMJS_Entity* GetEntityWrapper(CBaseEntity *pEntity){
+	if(pEntity == NULL) return NULL;
+
 	auto ref = gamehelpers->EntityToReference(pEntity);
 	auto it = refs.find(ref);
 	if(it != refs.end()) return it->second;

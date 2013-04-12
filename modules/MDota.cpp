@@ -10,8 +10,9 @@ WRAPPED_CLS_CPP(MDota, SMJS_Module);
 
 IGameConfig *g_pGameConf = NULL;
 void *LoadParticleFile;
-CDetour *parseUnitDetour;
 
+CDetour *parseUnitDetour;
+CDetour *getKeyWithDefault2;
 
 DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	void *ret = DETOUR_MEMBER_CALL(ParseUnit)(a2, a3, a4);
@@ -33,6 +34,12 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 		}
 	}
 
+	return ret;
+}
+
+DETOUR_DECL_STATIC3_STDCALL(GetKeyWithDefault2, char*, void*, kv, char*, key, void*, def){
+	char *ret = DETOUR_STATIC_CALL(GetKeyWithDefault2)(kv, key, def);
+	printf("%s = %s\n", key, ret);
 	return ret;
 }
 
@@ -58,6 +65,15 @@ MDota::MDota(){
 	
 	parseUnitDetour->EnableDetour();
 
+	/*
+	getKeyWithDefault2 = DETOUR_CREATE_STATIC(GetKeyWithDefault2, "GetKeyWithDefault2");
+	if(!getKeyWithDefault2){
+		smutils->LogError(myself, "Unable to hook GetKeyWithDefault2!");
+		return;
+	}
+	
+	getKeyWithDefault2->EnableDetour();
+	*/
 
 	if(!g_pGameConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
 		smutils->LogError(myself, "Couldn't sigscan LoadParticleFile");

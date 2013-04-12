@@ -23,6 +23,11 @@ class SMJS_Plugin;
 class SMJS_BaseWrapped;
 class SMJS_Module;
 
+class IPluginDestroyedHandler {
+public:
+	virtual void OnPluginDestroyed(SMJS_Plugin *plugin) = 0;
+};
+
 void SMJS_Init();
 
 extern v8::Isolate *mainIsolate;

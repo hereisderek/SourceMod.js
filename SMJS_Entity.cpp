@@ -4,26 +4,51 @@
 WRAPPED_CLS_CPP(SMJS_Entity, SMJS_BaseWrapped)
 
 SMJS_Entity::SMJS_Entity(CBaseEntity *ent){
-	this->ent = ent;
-	valid = ent != NULL;
+	this->ent = NULL;
+
 	isEdict = false;
 	entIndex = -1;
+	
+	SetEntity(ent);
 
-	netprops.entWrapper = this;
+	
+
 	keyvalues.entWrapper = this;
+}
 
-	if(ent != NULL){
-		IServerUnknown *pUnk = (IServerUnknown *)ent;
-		IServerNetworkable *pNet = pUnk->GetNetworkable();
-		if(pNet){
-			entIndex = gamehelpers->IndexOfEdict(pNet->GetEdict());
+void SMJS_Entity::SetEntity(CBaseEntity *ent){
+	if(this->ent != NULL){
+		if(this->ent != ent){
+			throw "Cannot set entity twice";
 		}
+
+		return;
 	}
+
+	if(ent == NULL) return;
+
+	this->ent = ent;
+	netprops.ent = ent;
+
+	IServerUnknown *pUnk = (IServerUnknown *)ent;
+	IServerNetworkable *pNet = pUnk->GetNetworkable();
+	if(pNet){
+		entIndex = gamehelpers->IndexOfEdict(pNet->GetEdict());
+	}
+
+	this->valid = true;
+}
+
+Handle<Value> GetEntityIndex(Local<String> prop, const AccessorInfo& info){
+	Local<Value> _intfld = info.This()->GetInternalField(0); \
+	SMJS_Entity* self = dynamic_cast<SMJS_Entity*>((SMJS_Base*)Handle<External>::Cast(_intfld)->Value());
+
+	return v8::Int32::New(self->entIndex);
 }
 
 void SMJS_Entity::OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper){
 	auto obj = wrapper->ToObject();
-	obj->Set(v8::String::New("index"), v8::Int32::New(entIndex), ReadOnly);
+	obj->SetAccessor(v8::String::New("index"), GetEntityIndex);
 
 	obj->Set(v8::String::New("netprops"), netprops.GetWrapper(plugin));
 	obj->Set(v8::String::New("keyvalues"), keyvalues.GetWrapper(plugin));
@@ -37,6 +62,7 @@ END
 
 FUNCTION_M(SMJS_Entity::getClassname)
 	GET_INTERNAL(SMJS_Entity*, self);
- 
+	if(!self->valid) THROW("Invalid entity");
+	
 	return v8::String::New(gamehelpers->GetEntityClassname(self->ent));
 END

@@ -23,7 +23,7 @@ MClient *self;
 
 MClient::MClient(){
 	self = this;
-
+	
 
 	identifier = "clients";
 	SH_ADD_HOOK(IServerGameClients, ClientConnect, serverClients, SH_STATIC(OnClientConnect), false);
@@ -53,6 +53,7 @@ void MClient::RunAuthChecks(){
 	for(int i = 0; i < sizeof(clients) / sizeof(clients[0]); ++i){
 		auto client = clients[i];
 		if(client == NULL) continue;
+		if(!client->connected) continue;
 		if(client->authStage == 2) continue;
 		
 		if(client->authStage == 0){
@@ -95,6 +96,7 @@ bool OnClientConnect(edict_t *pEntity, const char *pszName, const char *pszAddre
 
 bool OnClientConnect_Post(edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen){
 	auto client = clients[gamehelpers->IndexOfEdict(pEntity)];
+	client->connected = true;
 	client->ReattachEntity();
 	self->CallGlobalFunctionWithWrapped("OnClientConnected", client);
 	return true;
@@ -102,6 +104,15 @@ bool OnClientConnect_Post(edict_t *pEntity, const char *pszName, const char *psz
 
 void OnClientPutInServer(edict_t *pEntity, const char *playername){
 	auto client = clients[gamehelpers->IndexOfEdict(pEntity)];
+
+	// If it's a bot
+	if(client == NULL){
+		client = new SMJS_Client(pEntity);
+		clients[client->entIndex] = client;
+		client->ReattachEntity();
+		clients[gamehelpers->IndexOfEdict(pEntity)] = client;
+	}
+
 	client->inGame = true;
 	client->ReattachEntity();
 	SetEntityWrapper(client->ent, client);

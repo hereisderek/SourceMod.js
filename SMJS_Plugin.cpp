@@ -68,7 +68,7 @@ SMJS_Plugin::~SMJS_Plugin(){
 		(*it)(this);
 	}
 
-	for(auto it = destroyCallbackWrappers.begin(); it != destroyCallbackWrappers.end(); ++it){
+	for(auto it = destroyCallbackHandlers.begin(); it != destroyCallbackHandlers.end(); ++it){
 		(*it)->OnPluginDestroyed(this);
 	}
 
@@ -83,8 +83,8 @@ void SMJS_Plugin::RegisterDestroyCallback(DestroyCallback func){
 	destroyCallbackFuncs.push_back(func);
 }
 
-void SMJS_Plugin::RegisterDestroyCallback(SMJS_BaseWrapped *ptr){
-	destroyCallbackWrappers.push_back(ptr);
+void SMJS_Plugin::RegisterDestroyCallback(IPluginDestroyedHandler *ptr){
+	destroyCallbackHandlers.push_back(ptr);
 }
 
 std::vector<v8::Persistent<v8::Function>>* SMJS_Plugin::GetHooks(char const *type){
