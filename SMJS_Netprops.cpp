@@ -37,19 +37,9 @@ v8::Persistent<v8::Value> SMJS_NPValueCacher::FindCachedValue(PLUGIN_ID plId, st
 void SMJS_NPValueCacher::InitCacheForPlugin(SMJS_Plugin *pl){
 	cachedValues.insert(std::make_pair(pl->id, std::map<std::string, v8::Persistent<v8::Value>>()));
 }
-v8::Persistent<v8::Value> SMJS_NPValueCacher::GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, SendProp *p, size_t offset){
-	bool isCacheable;
-	auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(ent, p, offset, &isCacheable));
-
-	if(isCacheable){
-		InsertCachedValue(plId, key, res);
-	}
-
-	return res;
-}
 
 SMJS_Netprops::SMJS_Netprops() {
-	valid = true;
+	
 }
 
 SMJS_Netprops::~SMJS_Netprops(){
@@ -129,12 +119,21 @@ unsigned int strncopy(char *dest, const char *src, size_t count){
 	return (dest - start);
 }
 
+v8::Persistent<v8::Value> SMJS_Netprops::GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, edict_t *edict, SendProp *p, size_t offset){
+	bool isCacheable;
+	auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(ent, edict, p, offset, &isCacheable));
+
+	if(isCacheable){
+		InsertCachedValue(plId, key, res);
+	}
+
+	return res;
+}
+
 bool SMJS_Netprops::GetEntityPropInfo(void *ent, const char *propName, sm_sendprop_info_t *propInfo){
 	IServerUnknown *pUnk = (IServerUnknown *)ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
 	if(!pNet) return false;
-
-	edict_t *edict = pNet->GetEdict();
 	
 	return gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), propName, propInfo);
 }
@@ -143,7 +142,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(v8::Local<v8::String> prop, con
 	Local<Value> _intfld = info.This()->GetInternalField(0); 
 	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
 
-	if(!self->valid) return v8::Undefined();
+	if(!self->entWrapper->valid) return v8::Undefined();
 
 	v8::String::AsciiValue str(prop);
 	
@@ -154,20 +153,18 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(v8::Local<v8::String> prop, con
 
 	sm_sendprop_info_t propInfo;
 	
-	IServerUnknown *pUnk = (IServerUnknown *)self->ent;
+	IServerUnknown *pUnk = (IServerUnknown *)self->entWrapper->ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
 	if(!pNet){
 		THROW("Entity is not networkable");
 	}
-
-	edict_t *edict = pNet->GetEdict();
 	
 	if(!gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), *str, &propInfo)){
 		return v8::Undefined();
 	}
 
 	bool isCacheable;
-	auto ret = SGetNetProp(self->ent, propInfo.prop, propInfo.actual_offset, &isCacheable, NULL);
+	auto ret = SGetNetProp(self->entWrapper->ent, self->entWrapper->edict, propInfo.prop, propInfo.actual_offset, &isCacheable, NULL);
 
 	if(isCacheable){
 		self->InsertCachedValue(GetPluginRunning()->id, propNameStdString, v8::Persistent<v8::Value>::New(ret));
@@ -181,40 +178,29 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(v8::Local<v8::String> prop, v8:
 	Local<Value> _intfld = info.This()->GetInternalField(0); 
 	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
 
-	if(!self->valid) return v8::Undefined();
+	if(!self->entWrapper->valid) return v8::Undefined();
 	
 	std::string propNameStdString(*v8::String::AsciiValue(prop));
 	sm_sendprop_info_t propInfo;
 	
-	IServerUnknown *pUnk = (IServerUnknown *)self->ent;
+	IServerUnknown *pUnk = (IServerUnknown *)self->entWrapper->ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
 	if(!pNet){
 		THROW("Entity is not networkable");
 	}
-
-	edict_t *edict = pNet->GetEdict();
 
 	
 	if(!gamehelpers->FindSendPropInfo(pNet->GetServerClass()->GetName(), *v8::String::AsciiValue(prop), &propInfo)){
 		return v8::Undefined();
 	}
 
-	//GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, void *ent, SendProp *p, size_t offset)
-	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_Netprops::GenerateThenFindCachedValue, self, GetPluginRunning()->id, propNameStdString, self->ent, propInfo.prop, propInfo.actual_offset));
+	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_Netprops::GenerateThenFindCachedValue, self, GetPluginRunning()->id, propNameStdString, self->entWrapper->ent, self->entWrapper->edict, propInfo.prop, propInfo.actual_offset));
 
-	return SSetNetProp(self->ent, propInfo.prop, propInfo.actual_offset, value, f);
+	return SSetNetProp(self->entWrapper->ent, self->entWrapper->edict, propInfo.prop, propInfo.actual_offset, value, f);
 }
 
-v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache, const char *name){
+v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, edict_t *edict, SendProp *p, size_t offset, v8::Local<v8::Value> value, boost::function<v8::Persistent<v8::Value> ()> getCache, const char *name){
 	std::string propNameStdString(name != NULL ? name : p->GetName());
-
-	IServerUnknown *pUnk = (IServerUnknown *)ent;
-	IServerNetworkable *pNet = pUnk->GetNetworkable();
-	edict_t *edict;
-
-	if(pNet){
-		edict = pNet->GetEdict();
-	}
 
 	int bit_count = p->m_nBits;
 	bool is_unsigned = ((p->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
@@ -291,7 +277,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, SendProp *p, size_t 
 
 		auto tmp = getCache();
 		if(tmp.IsEmpty()){
-			SGetNetProp(ent, p, offset, NULL);
+			SGetNetProp(ent, edict, p, offset, NULL);
 			tmp = getCache();
 		}
 
@@ -315,20 +301,8 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, SendProp *p, size_t 
 	return value;
 }
 
-v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, SendProp *p, size_t offset, bool *isCacheable, const char *name, bool notAnEntity){
+v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, edict_t *edict, SendProp *p, size_t offset, bool *isCacheable, const char *name){
 	std::string propNameStdString(name != NULL ? name : p->GetName());
-	
-	IServerUnknown *pUnk;
-	IServerNetworkable *pNet;
-	edict_t *edict;
-
-	if(!notAnEntity){
-		pUnk = (IServerUnknown *) ent;
-		pNet = pUnk->GetNetworkable();
-		if(pNet){
-			edict = pNet->GetEdict();
-		}
-	}
 	
 	int bit_count = p->m_nBits;
 	bool is_unsigned = ((p->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
@@ -409,7 +383,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, SendProp *p, size_t 
 			THROW_VERB("Error looking up DataTable for prop %s", name != NULL ? name : p->GetName());
 		}
 
-		SMJS_DataTable *table = new SMJS_DataTable(GetPluginRunning(), ent, pTable, offset);
+		SMJS_DataTable *table = new SMJS_DataTable(GetPluginRunning(), ent, edict, pTable, offset);
 		if(isCacheable != NULL) *isCacheable = true;
 		return table->GetWrapper();
 	}break;
@@ -436,7 +410,7 @@ v8::Handle<v8::Value> SMJS_DataTable::DTGetter(uint32_t index, const AccessorInf
 	auto pProp = self->pTable->GetProp(index);
 
 	bool isCacheable;
-	auto res = SMJS_Netprops::SGetNetProp(self->ent, pProp, self->offset + pProp->GetOffset(), &isCacheable, self->pTable->GetName());
+	auto res = SMJS_Netprops::SGetNetProp(self->ent, self->edict, pProp, self->offset + pProp->GetOffset(), &isCacheable, self->pTable->GetName());
 	if(isCacheable){
 		self->cachedValues.insert(std::make_pair(index, res));
 	}
@@ -450,7 +424,7 @@ v8::Handle<v8::Value> SMJS_DataTable::DTSetter(uint32_t index, Local<Value> valu
 	if(index >= (uint32_t) self->pTable->GetNumProps()) THROW_VERB("Index %d out of bounds", index);
 
 	auto pProp = self->pTable->GetProp(index);
-	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_DataTable::GenerateThenFindCachedValue, self, index, self->ent, pProp, self->offset + pProp->GetOffset()));
+	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_DataTable::GenerateThenFindCachedValue, self, index, pProp, self->offset + pProp->GetOffset()));
 
-	return SMJS_Netprops::SSetNetProp(self->ent, pProp, self->offset + pProp->GetOffset(), value, f, self->pTable->GetName());
+	return SMJS_Netprops::SSetNetProp(self->ent, self->edict, pProp, self->offset + pProp->GetOffset(), value, f, self->pTable->GetName());
 }

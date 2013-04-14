@@ -12,7 +12,7 @@ IGameConfig *g_pGameConf = NULL;
 void *LoadParticleFile;
 
 CDetour *parseUnitDetour;
-CDetour *getKeyWithDefault2;
+CDetour *getValueForLevelDetour;
 
 DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	void *ret = DETOUR_MEMBER_CALL(ParseUnit)(a2, a3, a4);
@@ -37,10 +37,51 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	return ret;
 }
 
-DETOUR_DECL_STATIC3_STDCALL(GetKeyWithDefault2, char*, void*, kv, char*, key, void*, def){
-	char *ret = DETOUR_STATIC_CALL(GetKeyWithDefault2)(kv, key, def);
-	printf("%s = %s\n", key, ret);
-	return ret;
+
+
+void* GetValueForLevel_Actual = NULL;
+__declspec(naked) void* GetValueForLevel(void *a4){
+	static const char *str1 = "%p = %p\n";
+	const char *a1;
+	const char *ability;
+	void *output;
+	void *result;
+
+	__asm {
+		push	ebp
+		mov		ebp, esp
+		sub		esp, 16
+
+		mov		a1, eax
+		mov		ability, ecx
+		mov		output, edi
+
+		push	[ebp + 8]
+		call	GetValueForLevel_Actual
+
+		mov		result, eax
+
+		mov		eax, ability
+		test	eax, eax
+		jz		end
+
+		pushad
+		mov		eax, result
+		push	eax
+		mov		eax, ability
+		push	eax
+		push	str1
+		call	printf
+		add		esp, 0Ch
+		popad
+
+end:
+		mov eax, result
+
+		mov esp, ebp
+		pop ebp
+		ret 4
+	}
 }
 
 MDota::MDota(){
@@ -64,16 +105,16 @@ MDota::MDota(){
 	}
 	
 	parseUnitDetour->EnableDetour();
-
 	/*
-	getKeyWithDefault2 = DETOUR_CREATE_STATIC(GetKeyWithDefault2, "GetKeyWithDefault2");
-	if(!getKeyWithDefault2){
-		smutils->LogError(myself, "Unable to hook GetKeyWithDefault2!");
+	
+	getValueForLevelDetour = DETOUR_CREATE_STATIC(GetValueForLevel, "GetValueForLevel");
+	if(!getValueForLevelDetour){
+		smutils->LogError(myself, "Unable to hook GetValueForLevel!");
 		return;
 	}
 	
-	getKeyWithDefault2->EnableDetour();
-	*/
+	getValueForLevelDetour->EnableDetour();*/
+	
 
 	if(!g_pGameConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
 		smutils->LogError(myself, "Couldn't sigscan LoadParticleFile");

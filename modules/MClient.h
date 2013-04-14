@@ -4,7 +4,9 @@
 #include <vector>
 #include <map>
 
-extern SMJS_Client *clients[65];
+#define MAXCLIENTS 25
+
+extern SMJS_Client *clients[MAXCLIENTS];
 
 
 

@@ -15,7 +15,7 @@ void OnClientDisconnect(edict_t *pEntity);
 void OnClientDisconnect_Post(edict_t *pEntity);
 void OnClientCommand(edict_t *pEntity, const CCommand &args);
 
-SMJS_Client *clients[65];
+SMJS_Client *clients[MAXCLIENTS];
 
 WRAPPED_CLS_CPP(MClient, SMJS_Module)
 

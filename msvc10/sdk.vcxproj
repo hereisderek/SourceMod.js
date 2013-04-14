@@ -1171,6 +1171,7 @@
     <ClCompile Include="..\SMJS.cpp" />
     <ClCompile Include="..\SMJS_BaseWrapped.cpp" />
     <ClCompile Include="..\SMJS_Client.cpp" />
+    <ClCompile Include="..\SMJS_DataMaps.cpp" />
     <ClCompile Include="..\SMJS_Entity.cpp" />
     <ClCompile Include="..\SMJS_EntKeyValues.cpp" />
     <ClCompile Include="..\SMJS_GameRules.cpp" />
@@ -1212,6 +1213,7 @@
     <ClInclude Include="..\modules\MServer.h" />
     <ClInclude Include="..\sdk\smsdk_config.h" />
     <ClInclude Include="..\sdk\smsdk_ext.h" />
+    <ClInclude Include="..\SMJS_DataMaps.h" />
     <ClInclude Include="..\SMJS_Entity.h" />
     <ClInclude Include="..\SMJS_EntKeyValues.h" />
     <ClInclude Include="..\SMJS_GameRules.h" />

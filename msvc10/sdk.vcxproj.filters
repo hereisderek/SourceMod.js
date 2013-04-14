@@ -101,6 +101,9 @@
     <ClCompile Include="..\SMJS_GameRulesProps.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\SMJS_DataMaps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\extension.h">
@@ -218,6 +221,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\SMJS_GameRulesProps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SMJS_DataMaps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

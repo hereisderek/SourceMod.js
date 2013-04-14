@@ -30,7 +30,7 @@ Handle<Value> SMJS_GameRulesProps::GetRulesProp(Local<String> propName, const Ac
 	}
 
 	bool isCacheable;
-	auto ret = SMJS_Netprops::SGetNetProp(g_GameRulesProp->gamerules, propInfo.prop, propInfo.actual_offset, &isCacheable, NULL, true);
+	auto ret = SMJS_Netprops::SGetNetProp(g_GameRulesProp->gamerules, NULL, propInfo.prop, propInfo.actual_offset, &isCacheable, NULL);
 
 	if(isCacheable){
 		g_GameRulesProp->InsertCachedValue(GetPluginRunning()->id, propNameStdString, v8::Persistent<v8::Value>::New(ret));
@@ -48,19 +48,22 @@ Handle<Value> SMJS_GameRulesProps::SetRulesProp(Local<String> propName, Local<Va
 		return v8::Undefined();
 	}
 
-	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_Netprops::GenerateThenFindCachedValue, g_GameRulesProp, GetPluginRunning()->id, propNameStdString, g_GameRulesProp->gamerules, propInfo.prop, propInfo.actual_offset));
+	boost::function<v8::Persistent<v8::Value> ()> f(boost::bind(&SMJS_GameRulesProps::GenerateThenFindCachedValue, g_GameRulesProp, GetPluginRunning()->id, propNameStdString, propInfo.prop, propInfo.actual_offset));
 	
 	IServerUnknown *pUnk = (IServerUnknown *)g_GameRulesProp->proxy;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
+	edict_t *edict;
 	if(!pNet){
 		throw "Invalid game rules proxy";
 	}
+	
+	edict = pNet->GetEdict();
 
-	auto res = SMJS_Netprops::SSetNetProp(g_GameRulesProp->gamerules, propInfo.prop, propInfo.actual_offset, value, f);
+	auto res = SMJS_Netprops::SSetNetProp(g_GameRulesProp->gamerules, NULL, propInfo.prop, propInfo.actual_offset, value, f);
 
 	// FIXME: This may actually not send the changes if the prop is a vector or datatable
 	// because it's going to get the cached value from the real gamerules and change the gamerules
 	// offsets instead of the proxy
-	SMJS_Netprops::SSetNetProp(g_GameRulesProp->proxy, propInfo.prop, propInfo.actual_offset, value, f);
+	SMJS_Netprops::SSetNetProp(g_GameRulesProp->proxy, edict, propInfo.prop, propInfo.actual_offset, value, f);
 	return res;
 }

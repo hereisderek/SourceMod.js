@@ -8,7 +8,6 @@
 class SMJS_Client : public SMJS_Entity {
 public:
 	bool inGame;
-	edict_t *edict;
 	int authStage;
 	bool connected;
 

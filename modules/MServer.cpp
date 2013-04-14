@@ -61,12 +61,12 @@ public:
 
 	WRAPPED_CLS(ClientArray, SMJS_BaseWrapped) {
 		temp->SetClassName(v8::String::New("ClientArray"));
-		proto->Set("length", v8::Int32::New(65));
+		proto->Set("length", v8::Int32::New(MAXCLIENTS));
 		temp->InstanceTemplate()->SetIndexedPropertyHandler(GetClient);
 	}
 
 	static v8::Handle<v8::Value> GetClient(uint32_t index, const AccessorInfo& info){
-		if(index >= 65) return v8::Undefined();
+		if(index >= MAXCLIENTS) return v8::Undefined();
 		if(index == 0) return v8::Null();
 		if(clients[index] == NULL) return v8::Null();
 		return clients[index]->GetWrapper(GetPluginRunning());

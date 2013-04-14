@@ -6,12 +6,12 @@ WRAPPED_CLS_CPP(SMJS_Entity, SMJS_BaseWrapped)
 SMJS_Entity::SMJS_Entity(CBaseEntity *ent){
 	this->ent = NULL;
 
+	datamaps.entWrapper = this;
+	netprops.entWrapper = this;
 	isEdict = false;
 	entIndex = -1;
 	
 	SetEntity(ent);
-
-	
 
 	keyvalues.entWrapper = this;
 }
@@ -28,12 +28,12 @@ void SMJS_Entity::SetEntity(CBaseEntity *ent){
 	if(ent == NULL) return;
 
 	this->ent = ent;
-	netprops.ent = ent;
 
 	IServerUnknown *pUnk = (IServerUnknown *)ent;
 	IServerNetworkable *pNet = pUnk->GetNetworkable();
 	if(pNet){
-		entIndex = gamehelpers->IndexOfEdict(pNet->GetEdict());
+		edict = pNet->GetEdict();
+		entIndex = gamehelpers->IndexOfEdict(edict);
 	}
 
 	this->valid = true;
@@ -52,6 +52,7 @@ void SMJS_Entity::OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Valu
 
 	obj->Set(v8::String::New("netprops"), netprops.GetWrapper(plugin));
 	obj->Set(v8::String::New("keyvalues"), keyvalues.GetWrapper(plugin));
+	obj->Set(v8::String::New("datamaps"), datamaps.GetWrapper(plugin));
 
 }
 

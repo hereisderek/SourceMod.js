@@ -16,6 +16,17 @@ public:
 		temp->InstanceTemplate()->SetNamedPropertyHandler(GetRulesProp, SetRulesProp);
 	}
 
+	v8::Persistent<v8::Value> GenerateThenFindCachedValue(PLUGIN_ID plId, std::string key, SendProp *p, size_t offset){
+		bool isCacheable;
+		auto res = v8::Persistent<v8::Value>::New(SMJS_Netprops::SGetNetProp(gamerules, NULL, p, offset, &isCacheable));
+
+		if(isCacheable){
+			InsertCachedValue(plId, key, res);
+		}
+
+		return res;
+	}
+
 	void OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Value> wrapper);
 
 	static Handle<Value> GetRulesProp(Local<String> property, const AccessorInfo& info);
