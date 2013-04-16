@@ -2,6 +2,7 @@
 #include "MClient.h"
 #include "SMJS_Plugin.h"
 #include "extension.h"
+#include "SMJS_ConVar.h"
 
 WRAPPED_CLS_CPP(MConsole, SMJS_Module)
 
@@ -281,4 +282,31 @@ FUNCTION_M(MConsole::addClientCommand)
 	AddCommand(GetPluginRunning(), *cmdName, callback, false);
 	
 	return v8::Undefined();
+END
+
+FUNCTION_M(MConsole::findConVar)
+	ARG_COUNT(1);
+	PSTR(cvarName);
+
+	auto plugin = GetPluginRunning();
+
+	if(plugin->isSandboxed){
+		if(strcmp(*cvarName, "sv_password") == 0) return v8::Null();
+		if(strcmp(*cvarName, "rcon_password") == 0) return v8::Null();
+	}
+
+	ConVar *cv = icvar->FindVar(*cvarName);
+	if(cv == NULL) return v8::Null();
+
+	if(plugin->isSandboxed){
+		int flags = cv->GetFlags();
+		if(flags & FCVAR_PROTECTED){
+			return v8::Null();
+		}
+	}
+
+	auto smjsCv = new SMJS_ConVar(plugin, cv);
+	auto wrap = smjsCv->GetWrapper();
+	smjsCv->Destroy();
+	return wrap;
 END

@@ -32,8 +32,6 @@ v8::Handle<v8::Value> SMJS_EntKeyValues::GetKeyValue(v8::Local<v8::String> prop,
 	if(!serverTools->GetKeyValue(self->entWrapper->ent, *propStr, &tmp[0], sizeof(tmp))){
 		return v8::Undefined();
 	}
-	
-	
 
 	if(tmp[0] != '\0'){
 		auto value = *((char**) tmp);

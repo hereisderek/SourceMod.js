@@ -6,12 +6,13 @@
 #include "MSocket.h"
 #include "SMJS_Interfaces.h"
 #include "SMJS_GameRules.h"
+#include "SMJS_Event.h"
 
 SH_DECL_HOOK6(IServerGameDLL, LevelInit, SH_NOATTRIB, false, bool, const char *, const char *, const char *, const char *, bool, bool);
 SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, false);
 SH_DECL_HOOK3_void(IServerGameDLL, ServerActivate, SH_NOATTRIB, 0, edict_t *, int, int);
 SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
-
+SH_DECL_HOOK2(IGameEventManager2, FireEvent, SH_NOATTRIB, 0, bool, IGameEvent *, bool);
 
 WRAPPED_CLS_CPP(MGame, SMJS_Module)
 
@@ -30,7 +31,12 @@ MGame::MGame(){
 	SH_ADD_HOOK(IServerGameDLL, ServerActivate, gamedll, SH_MEMBER(this, &MGame::OnPreServerActivate), false);
 	SH_ADD_HOOK(IServerGameDLL, ServerActivate, gamedll, SH_MEMBER(this, &MGame::OnServerActivate), true);
 	SH_ADD_HOOK(IServerGameDLL, Think, gamedll, SH_MEMBER(this, &MGame::OnThink), true);
+
 	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_STATIC(MGame::LevelShutdown), false);
+
+	SH_ADD_HOOK(IGameEventManager2, FireEvent, gameevents, SH_STATIC(MGame::OnFireEvent), false);
+	//SH_ADD_HOOK(IGameEventManager2, FireEvent, gameevents, SH_STATIC(MGame::OnFireEvent_Post), true);
+
 	smutils->AddGameFrameHook(MGame::OnGameFrame);
 }
 
@@ -63,6 +69,83 @@ void MGame::OnGameFrame(bool simulating){
 
 void MGame::OnThink(bool finalTick){
 	MSocket::OnThink(finalTick);
+}
+
+bool MGame::OnFireEvent(IGameEvent *pEvent, bool bDontBroadcast){
+	if(META_RESULT_STATUS >= MRES_SUPERCEDE) RETURN_META_VALUE(MRES_IGNORED, false);
+	if(pEvent == NULL) RETURN_META_VALUE(MRES_IGNORED, false);
+
+	const char *name = pEvent->GetName();
+	
+	auto eventObject = new SMJS_Event(pEvent, !bDontBroadcast, false);
+	int len = GetNumPlugins();
+	for(int i = 0; i < len; ++i){
+		SMJS_Plugin *pl = GetPlugin(i);
+		if(pl == NULL) continue;
+
+		HandleScope handle_scope(pl->GetIsolate());
+		Context::Scope context_scope(pl->GetContext());
+
+		auto vec = pl->GetEventHooks(name);
+		if(vec->size() == 0) continue;
+		
+		v8::Handle<v8::Value> args = eventObject->GetWrapper(pl);
+
+		for(auto it = vec->begin(); it != vec->end(); ++it){
+			(*it)->Call(pl->GetContext()->Global(), 1, &args);
+
+			if(eventObject->blocked){
+				eventObject->Destroy();
+				gameevents->FreeEvent(pEvent);
+				RETURN_META_VALUE(MRES_SUPERCEDE, false);
+			}
+		}
+	}
+
+	bool broadcast = eventObject->broadcast;
+	eventObject->Destroy();
+
+	//FIXME: OnFireEvent_Post is broken, some kind of incompatibility with SourceMod
+
+	if(broadcast != !bDontBroadcast){
+		RETURN_META_VALUE_NEWPARAMS(MRES_IGNORED, true, &IGameEventManager2::FireEvent, (pEvent, !broadcast));
+		OnFireEvent_Post(pEvent, !broadcast);
+	}else{
+		OnFireEvent_Post(pEvent, bDontBroadcast);
+	}
+
+
+
+	RETURN_META_VALUE(MRES_IGNORED, true);
+}
+
+bool MGame::OnFireEvent_Post(IGameEvent *pEvent, bool bDontBroadcast){
+	if(META_RESULT_STATUS >= MRES_SUPERCEDE) RETURN_META_VALUE(MRES_IGNORED, false);
+	if(pEvent == NULL) RETURN_META_VALUE(MRES_IGNORED, false);
+
+	const char *name = pEvent->GetName();
+	
+	auto eventObject = new SMJS_Event(pEvent, !bDontBroadcast, true);
+	int len = GetNumPlugins();
+	for(int i = 0; i < len; ++i){
+		SMJS_Plugin *pl = GetPlugin(i);
+		if(pl == NULL) continue;
+
+		HandleScope handle_scope(pl->GetIsolate());
+		Context::Scope context_scope(pl->GetContext());
+
+		auto vec = pl->GetEventPostHooks(name);
+		if(vec->size() == 0) continue;
+		
+		v8::Handle<v8::Value> args = eventObject->GetWrapper(pl);
+
+		for(auto it = vec->begin(); it != vec->end(); ++it){
+			(*it)->Call(pl->GetContext()->Global(), 1, &args);
+		}
+	}
+
+	eventObject->Destroy();
+	RETURN_META_VALUE(MRES_IGNORED, true);
 }
 
 bool FindNestedDataTable(SendTable *pTable, const char *name){
@@ -230,6 +313,77 @@ FUNCTION_M(MGame::findEntityByClassname)
 	return GetEntityWrapper(ent)->GetWrapper(GetPluginRunning());
 END
 
+FUNCTION_M(MGame::findEntitiesByClassname)
+	ARG_COUNT(1);
+	PSTR(searchnameTmp);
+	const char *searchname = *searchnameTmp;
+
+	auto arr = v8::Array::New();
+	int length = 0;
+	int lastIndex = -1;
+
+	CBaseEntity *pEntity = (CBaseEntity *)serverTools->FirstEntity();
+	if (!pEntity) return arr;
+	const char *classname;
+
+	int lastletterpos = strlen(searchname) - 1;
+
+	static int offset = -1;
+	if (offset == -1){
+		offset = gamehelpers->FindInDataMap(gamehelpers->GetDataMap(pEntity), "m_iClassname")->fieldOffset;
+	}
+
+	string_t s;
+
+
+	while (pEntity){
+		if ((s = *(string_t *)((uint8_t *)pEntity + offset)) == NULL_STRING){
+			pEntity = (CBaseEntity *)serverTools->NextEntity(pEntity);
+			continue;
+		}
+
+		classname = STRING(s);
+		
+		if (searchname[lastletterpos] == '*'){
+			if (strncasecmp(searchname, classname, lastletterpos) == 0){
+				arr->Set(length++, GetEntityWrapper(pEntity)->GetWrapper(GetPluginRunning()));
+			}
+		}else if (strcasecmp(searchname, classname) == 0){
+			arr->Set(length++, GetEntityWrapper(pEntity)->GetWrapper(GetPluginRunning()));
+		}
+
+		pEntity = (CBaseEntity *)serverTools->NextEntity(pEntity);
+	}
+
+	return arr;
+END
+
 FUNCTION_M(MGame::getTime)
 	return v8::Number::New(gpGlobals->curtime);
+END
+
+FUNCTION_M(MGame::hookEvent)
+	GET_INTERNAL(MGame*, self);
+	PSTR(name);
+	PFUN(callback);
+
+	bool post = true;
+	if(args.Length() > 2){
+		post = args[2]->BooleanValue();
+	}
+	
+	if (!gameevents->FindListener(self, *name)){
+		if (!gameevents->AddListener(self, *name, true)){
+			return v8::Boolean::New(false);
+		}
+	}
+
+	auto plugin = GetPluginRunning();
+	if(post){
+		plugin->GetEventPostHooks(*name)->push_back(v8::Persistent<v8::Function>::New(callback));
+	}else{
+		plugin->GetEventHooks(*name)->push_back(v8::Persistent<v8::Function>::New(callback));
+	}
+
+	return v8::Boolean::New(true);
 END

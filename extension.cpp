@@ -78,7 +78,7 @@ bool SMJS::SDK_OnLoad(char *error, size_t maxlength, bool late){
 	SMJS_Init();
 
 	icvar->RegisterConCommand(&jsCmd);
-
+	
 	RegCommand("js_load", CmdLoadPlugin);
 	RegCommand("js_unload", CmdUnloadPlugin);
 	RegCommand("js_reload", CmdReloadPlugin);

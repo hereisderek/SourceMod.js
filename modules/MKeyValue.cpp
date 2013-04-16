@@ -118,12 +118,7 @@ v8::Handle<v8::Value> ParseKeyValue(const char *str){
 				THROW_VERB("Unterminated string at line %d", line);
 			}
 
-			char *chars = (char*) malloc(i - startIndex);
-			memcpy(chars, str + startIndex + 1, i - startIndex - 1);
-			chars[i - startIndex - 1] = '\0';
-
-			auto resultString = v8::String::New(chars);
-			free(chars);
+			auto resultString = v8::String::New(&str[startIndex + 1], i - startIndex - 1);
 
 			if(treeType[depth] == Object){
 				if(keys[depth].IsEmpty()){
@@ -143,10 +138,11 @@ v8::Handle<v8::Value> ParseKeyValue(const char *str){
 				if ((chr < '0' || chr > '9') && chr != '.' && chr != 'x') break;
 			}
 
-			char *chars = (char*) malloc(i - startIndex);
-			memcpy(chars, str + i, i - startIndex);
-			auto number = v8::Number::New(atof(chars));
-			free(chars);
+			char tmp = str[i];
+			const_cast<char*>(str)[i] = '\0';
+			auto number = v8::Number::New(atof(&str[i]));
+			const_cast<char*>(str)[i] = tmp;
+
 			//TODO: If the number is an invalid number, throw an error
 
 			if(treeType[depth] == Object){

@@ -80,6 +80,15 @@ using namespace v8;
 	THROW_VERB("Argument %i of %s, must be an integer\n",_argn,FUN_NAME);} \
 	int n=(int)(args[_argn-1]->Int32Value()); 0
 
+#define PBOL(n)             0; if (args.Length()<++_argn || !args[_argn-1]->IsBoolean()) {\
+	THROW_VERB("Argument %i of %s, must be a boolean\n",_argn,FUN_NAME);} \
+	bool n=(bool)(args[_argn-1]->BooleanValue()); 0
+
+#define PNUM(n)             0; if (args.Length()<++_argn || !args[_argn-1]->IsNumber()) {\
+	THROW_VERB("Argument %i of %s, must be an number\n",_argn,FUN_NAME);} \
+	double n=(args[_argn-1]->NumberValue()); 0
+
+
 #define PSTR(n)             0; if (args.Length()<++_argn) {\
 	THROW_VERB("Argument %i of %s must be a string\n",_argn,FUN_NAME);} \
 	v8::String::AsciiValue n(args[_argn-1]); 0

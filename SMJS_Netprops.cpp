@@ -331,8 +331,8 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, edict_t *edict, Send
 			v = *(int32_t * )addr;
 		}else if(bit_count > 32){
 			auto arr = v8::Array::New(2);
-			arr->Set(0, v8::Int32::New(*(uint32_t * )addr));
-			arr->Set(1, v8::Int32::New(*(uint32_t * )((intptr_t) addr + 4)));
+			arr->Set(0, v8::Int32::New(*(uint32_t * )((intptr_t) addr + 4)));
+			arr->Set(1, v8::Int32::New(*(uint32_t * )addr));
 			return arr;
 		}else if (bit_count >= 17){
 			v = *(int32_t *) addr;

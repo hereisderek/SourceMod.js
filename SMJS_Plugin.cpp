@@ -109,6 +109,30 @@ std::vector<v8::Persistent<v8::Function>>* SMJS_Plugin::GetHooks(char const *typ
 	return vec;
 }
 
+std::vector<v8::Persistent<v8::Function>>* SMJS_Plugin::GetEventHooks(char const *type){
+	std::string typeStd(type);
+	auto it = eventHooks.find(typeStd);
+	if(it != eventHooks.end()){
+		return &it->second;
+	}
+
+	
+	eventHooks.insert(std::make_pair(typeStd, std::vector<v8::Persistent<v8::Function>>()));
+	return GetEventHooks(type);
+}
+
+std::vector<v8::Persistent<v8::Function>>* SMJS_Plugin::GetEventPostHooks(char const *type){
+	std::string typeStd(type);
+	auto it = eventPostHooks.find(typeStd);
+	if(it != eventPostHooks.end()){
+		return &it->second;
+	}
+
+	
+	eventPostHooks.insert(std::make_pair(typeStd, std::vector<v8::Persistent<v8::Function>>()));
+	return GetEventHooks(type);
+}
+
 bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal){
 	HandleScope handle_scope(isolate);
 	Context::Scope context_scope(context);

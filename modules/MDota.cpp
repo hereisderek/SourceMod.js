@@ -12,7 +12,7 @@ IGameConfig *g_pGameConf = NULL;
 void *LoadParticleFile;
 
 CDetour *parseUnitDetour;
-CDetour *getValueForLevelDetour;
+CDetour *playerPickHeroDetour;
 
 DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	void *ret = DETOUR_MEMBER_CALL(ParseUnit)(a2, a3, a4);
@@ -37,6 +37,10 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	return ret;
 }
 
+DETOUR_DECL_MEMBER2(PlayerPickHero, int, int, a1, char*, hero){
+	printf("%s --- %s\n", gamehelpers->GetEntityClassname(((CBaseEntity*)this)), hero);
+	return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, "npc_dota_hero_meepo");
+}
 
 
 void* GetValueForLevel_Actual = NULL;
@@ -105,16 +109,14 @@ MDota::MDota(){
 	}
 	
 	parseUnitDetour->EnableDetour();
-	/*
-	
-	getValueForLevelDetour = DETOUR_CREATE_STATIC(GetValueForLevel, "GetValueForLevel");
-	if(!getValueForLevelDetour){
-		smutils->LogError(myself, "Unable to hook GetValueForLevel!");
+
+	playerPickHeroDetour = DETOUR_CREATE_MEMBER(PlayerPickHero, "PlayerPickHero");
+	if(!playerPickHeroDetour){
+		smutils->LogError(myself, "Unable to hook PlayerPickHero!");
 		return;
 	}
 	
-	getValueForLevelDetour->EnableDetour();*/
-	
+	playerPickHeroDetour->EnableDetour();
 
 	if(!g_pGameConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
 		smutils->LogError(myself, "Couldn't sigscan LoadParticleFile");

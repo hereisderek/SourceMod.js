@@ -45,7 +45,10 @@ protected: // Protected variables
 
 	std::vector<DestroyCallback> destroyCallbackFuncs;
 	std::vector<IPluginDestroyedHandler*> destroyCallbackHandlers;
+
 	std::map<std::string, std::vector<v8::Persistent<v8::Function>>> hooks;
+	std::map<std::string, std::vector<v8::Persistent<v8::Function>>> eventHooks;
+	std::map<std::string, std::vector<v8::Persistent<v8::Function>>> eventPostHooks;
 
 public: // Public functions
 	SMJS_Plugin(const char *name);
@@ -58,7 +61,8 @@ public: // Public functions
 	virtual void RegisterDestroyCallback(IPluginDestroyedHandler *ptr);
 	//virtual int GetApiVersion(char const *id, int curVersion){return curVersion;};
 	virtual std::vector<v8::Persistent<v8::Function>>* GetHooks(char const *type);
-
+	virtual std::vector<v8::Persistent<v8::Function>>* GetEventHooks(char const *type);
+	virtual std::vector<v8::Persistent<v8::Function>>* GetEventPostHooks(char const *type);
 	// 
 
 	bool RunString(const char* name, const char *source, bool asGlobal);

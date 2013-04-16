@@ -2,7 +2,10 @@
 #include "SMJS_Module.h"
 #include "SMJS_GameRules.h"
 
-class MGame : public SMJS_Module {
+class MGame :
+	public SMJS_Module,
+	public IGameEventListener2
+{
 public:
 	SMJS_GameRules rules;
 
@@ -14,22 +17,32 @@ public:
 	static CBaseEntity* FindEntityByClassname(int startIndex, char *searchname);
 	static CBaseEntity* NativeFindEntityByClassname(int startIndex, char *searchname);
 
+	// IGameEventListener2
+	void FireGameEvent(IGameEvent *pEvent){}
+	int GetEventDebugID(){
+		return EVENT_DEBUG_ID_INIT;
+	}
+
 	FUNCTION_DECL(hook);
 	FUNCTION_DECL(getTeamClientCount);
 	FUNCTION_DECL(precacheModel);
 	FUNCTION_DECL(findEntityByClassname);
+	FUNCTION_DECL(findEntitiesByClassname);
 	FUNCTION_DECL(getTime);
+	FUNCTION_DECL(hookEvent);
 
 	WRAPPED_CLS(MGame, SMJS_Module) {
 		temp->SetClassName(v8::String::New("GameModule"));
-
+		
 		proto->Set("rules", v8::Null());
 
 		WRAPPED_FUNC(hook);
 		WRAPPED_FUNC(getTeamClientCount);
 		WRAPPED_FUNC(precacheModel);
 		WRAPPED_FUNC(findEntityByClassname);
+		WRAPPED_FUNC(findEntitiesByClassname);
 		WRAPPED_FUNC(getTime);
+		WRAPPED_FUNC(hookEvent);
 	}
 
 private:
@@ -38,5 +51,8 @@ private:
 	void OnPreServerActivate(edict_t *pEdictList, int edictCount, int clientMax);
 	void OnThink(bool finalTick);
 	static void LevelShutdown();
+	static bool OnFireEvent(IGameEvent *pEvent, bool bDontBroadcast);
+	static bool OnFireEvent_Post(IGameEvent *pEvent, bool bDontBroadcast);
+
 	static void OnGameFrame(bool simulating);
 };
