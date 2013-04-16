@@ -38,8 +38,28 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 }
 
 DETOUR_DECL_MEMBER2(PlayerPickHero, int, int, a1, char*, hero){
-	printf("%s --- %s\n", gamehelpers->GetEntityClassname(((CBaseEntity*)this)), hero);
-	return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, "npc_dota_hero_meepo");
+	int len = GetNumPlugins();
+	for(int i = 0; i < len; ++i){
+		SMJS_Plugin *pl = GetPlugin(i);
+		if(pl == NULL) continue;
+		
+		HandleScope handle_scope(pl->GetIsolate());
+		Context::Scope context_scope(pl->GetContext());
+
+		auto hooks = pl->GetHooks("Dota_OnHeroPicked");
+		v8::Handle<v8::Value> args = v8::String::New(hero);
+
+		for(auto it = hooks->begin(); it != hooks->end(); ++it){
+			auto func = *it;
+			auto ret = func->Call(pl->GetContext()->Global(), 1, &args);
+			if(!ret.IsEmpty() && ret->IsString()){
+				v8::String::AsciiValue ascii(ret);
+				return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, *ascii);
+			}
+		}
+	}
+
+	return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, hero);
 }
 
 
