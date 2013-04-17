@@ -15,6 +15,10 @@ public:
 	FUNCTION_DECL(execute);
 	FUNCTION_DECL(getPort);
 	FUNCTION_DECL(getIP);
+	FUNCTION_DECL(userIdToClient);
+	FUNCTION_DECL(changeMap);
+	FUNCTION_DECL(getMap);
+	FUNCTION_DECL(isMapValid);
 
 	WRAPPED_CLS(MServer, SMJS_Module) {
 		temp->SetClassName(v8::String::New("ServerModule"));
@@ -27,5 +31,10 @@ public:
 		WRAPPED_FUNC(execute);
 		WRAPPED_FUNC(getPort);
 		WRAPPED_FUNC(getIP);
+		WRAPPED_FUNC(userIdToClient);
+		WRAPPED_FUNC(changeMap);
+		WRAPPED_FUNC(getMap);
+		WRAPPED_FUNC(isMapValid);
+
 	}
 };

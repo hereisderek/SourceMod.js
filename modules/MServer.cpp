@@ -19,6 +19,8 @@ FUNCTION_M(MServer::print)
 END
 
 FUNCTION_M(MServer::command)
+	if(GetPluginRunning()->isSandboxed) THROW("Function not available in sandboxed plugins");
+
 	ARG_COUNT(1);
 	PSTR(str);
 
@@ -33,6 +35,8 @@ FUNCTION_M(MServer::command)
 END
 
 FUNCTION_M(MServer::execute)
+	if(GetPluginRunning()->isSandboxed) THROW("Function not available in sandboxed plugins");
+	
 	ARG_COUNT(0);
 	engine->ServerExecute();
 	return JS_undefined;
@@ -50,6 +54,40 @@ FUNCTION_M(MServer::getIP)
 	auto cvar = icvar->FindVar("ip");
 	if(cvar == NULL) return JS_undefined;
 	return v8::String::New(cvar->GetString());
+END
+
+FUNCTION_M(MServer::userIdToClient)
+	PINT(userid);
+	int client = playerhelpers->GetClientOfUserId(userid);
+	if(client <= 0) return v8::Null();
+	if(clients[client] == NULL) return v8::Null();
+	return clients[client]->GetWrapper(GetPluginRunning());
+END
+
+FUNCTION_M(MServer::changeMap)
+	PSTR(mapName);
+	PSTR(reason);
+
+	if(!gamehelpers->IsMapValid(*mapName)) THROW_VERB("Invalid map \"%s\"", *mapName);
+
+	// Workaround
+	char buffer[512];
+	snprintf(buffer, sizeof(buffer), "map \"%s\"\n", *mapName);
+	engine->ServerCommand(buffer);
+	engine->ServerExecute();
+
+	//engine->ChangeLevel(*mapName, *reason);
+
+	RETURN_UNDEF;
+END
+
+FUNCTION_M(MServer::getMap)
+	return v8::String::New(gamehelpers->GetCurrentMap());
+END
+
+FUNCTION_M(MServer::isMapValid)
+	PSTR(mapName);
+	return v8::Boolean::New(gamehelpers->IsMapValid(*mapName));
 END
 
 class ClientArray : public SMJS_BaseWrapped {
