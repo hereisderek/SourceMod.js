@@ -90,6 +90,12 @@ FUNCTION_M(MServer::isMapValid)
 	return v8::Boolean::New(gamehelpers->IsMapValid(*mapName));
 END
 
+FUNCTION_M(MServer::log)
+	PSTR(str);
+	smutils->LogMessage(myself, "%s", str);
+	RETURN_UNDEF;
+END
+
 class ClientArray : public SMJS_BaseWrapped {
 public:
 

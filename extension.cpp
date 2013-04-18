@@ -183,7 +183,7 @@ bool FindAndRunAutoloadPlugins(){
 
 SMJS_Plugin *LoadPlugin(const char *dir){
 	auto plugin = SMJS_Plugin::GetPluginByDir(dir);
-	if(plugin != NULL) return NULL;
+	if(plugin != NULL) return plugin;
 
 	plugin = new SMJS_Plugin(dir);
 
@@ -204,17 +204,17 @@ SMJS_Plugin *LoadPlugin(const char *dir){
 
 	plugin->LoadModules();
 
-	bool ret = plugin->LoadFile("Main.js", true);
-	if(!ret){
+	if(!plugin->LoadFile("Main.js", true)){
 		delete plugin;
 		return NULL;
 	}
 
 	// Late loading
 	if(smutils->IsMapRunning()){
-		auto hooks = plugin->GetHooks("OnMapStart");
 		HandleScope handle_scope(plugin->GetIsolate());
 		Context::Scope context_scope(plugin->GetContext());
+
+		auto hooks = plugin->GetHooks("OnMapStart");
 		for(auto it = hooks->begin(); it != hooks->end(); ++it){
 			(*it)->Call(plugin->GetContext()->Global(), 0, NULL);
 		}

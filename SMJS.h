@@ -32,4 +32,5 @@ void SMJS_Init();
 
 extern v8::Isolate *mainIsolate;
 
+
 #endif

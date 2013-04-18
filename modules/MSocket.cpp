@@ -147,11 +147,23 @@ void MSocket::OnGameFrame(bool simulating){
 		HandleScope handle_scope(pl->GetIsolate());
 		Context::Scope context_scope(context);
 
-		int received;
-		if(socket.IsSocketValid() && (received = socket.Receive(4096)) >= 0){
+		int received = socket.Receive(4096);
+		if(socket.IsSocketValid() && received != 0){
 			if(!jssocket->connected) jssocket->connected = true;
 			do{
-				if(received <= 0) break;
+				if(received <= 0){
+					if(socket.GetSocketError() != CSimpleSocket::SocketEwouldblock){
+						jssocket->connected = false;
+
+						auto callback = jssocket->GetWrapper()->ToObject()->Get(v8::String::New("onClose"));
+
+						if(callback->IsFunction()){
+							auto func = v8::Handle<v8::Function>::Cast(callback);
+							func->Call(context->Global(), 0, NULL);
+						}
+					}
+					break;
+				}
 				
 				
 				auto callback = jssocket->GetWrapper()->ToObject()->Get(v8::String::New("onData"));
@@ -169,7 +181,7 @@ void MSocket::OnGameFrame(bool simulating){
 
 					FreeBuffer(pl->GetIsolate(), buffer);
 				}
-			}while((received = socket.Receive(4096)) > 0);
+			}while((received = socket.Receive(4096)) != 0);
 		}else if(jssocket->connected){
 			jssocket->connected = false;
 

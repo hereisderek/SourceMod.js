@@ -146,7 +146,7 @@ bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal)
 		char *buffer = new char[strlen(source) + 100];
 		strcpy(buffer, "(function(global){");
 		strcat(buffer, source);
-		strcat(buffer, "})();");
+		strcat(buffer, "})(this);");
 		script = Script::Compile(v8::String::New(buffer), &origin);
 		delete buffer;
 	}
