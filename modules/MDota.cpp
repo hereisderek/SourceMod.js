@@ -8,8 +8,10 @@
 
 WRAPPED_CLS_CPP(MDota, SMJS_Module);
 
-IGameConfig *g_pGameConf = NULL;
+IGameConfig *dotaConf = NULL;
 void *LoadParticleFile;
+void *CreateUnit;
+
 
 CDetour *parseUnitDetour;
 CDetour *playerPickHeroDetour;
@@ -38,6 +40,12 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 }
 
 DETOUR_DECL_MEMBER2(PlayerPickHero, int, int, a1, char*, hero){
+
+	// Repick
+	if(hero == NULL){
+		return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, hero);
+	}
+
 	int len = GetNumPlugins();
 	for(int i = 0; i < len; ++i){
 		SMJS_Plugin *pl = GetPlugin(i);
@@ -112,14 +120,14 @@ MDota::MDota(){
 	identifier = "dota";
 
 	char conf_error[255] = "";
-	if (!gameconfs->LoadGameConfigFile("smjs.dota", &g_pGameConf, conf_error, sizeof(conf_error))){
+	if (!gameconfs->LoadGameConfigFile("smjs.dota", &dotaConf, conf_error, sizeof(conf_error))){
 		if (conf_error){
 			smutils->LogError(myself, "Could not read smjs.dota.txt: %s", conf_error);
 			return;
 		}
 	}
 
-	CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
+	CDetourManager::Init(g_pSM->GetScriptingEngine(), dotaConf);
 
 
 	parseUnitDetour = DETOUR_CREATE_MEMBER(ParseUnit, "ParseUnit");
@@ -138,8 +146,13 @@ MDota::MDota(){
 	
 	playerPickHeroDetour->EnableDetour();
 
-	if(!g_pGameConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
+	if(!dotaConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
 		smutils->LogError(myself, "Couldn't sigscan LoadParticleFile");
+		return;
+	}
+
+	if(!dotaConf->GetMemSig("CreateUnit", &CreateUnit) || CreateUnit == NULL){
+		smutils->LogError(myself, "Couldn't sigscan CreateUnit");
 		return;
 	}
 }
@@ -283,7 +296,31 @@ FUNCTION_M(MDota::forceWin)
 	PINT(team);
 	if(team != 2 && team != 3) THROW_VERB("Invalid team %d", team);
 
-	//TODO
+	//WORKAROUND
+	auto cmd = icvar->FindCommand("dota_kill_buildings");
+	cmd->RemoveFlags(FCVAR_CHEAT);
+	engine->ServerCommand("dota_kill_buildings\n");
 
-	return v8::False();
+	return v8::True();
+END
+
+FUNCTION_M(MDota::createUnit)
+	PSTR(tmp);
+	PINT(team);
+	CBaseEntity *ent;
+	char *clsname = *tmp;
+	__asm {
+		mov		eax, clsname
+		push	0
+		push	1
+		push	team
+		push	0		// Client
+		call	CreateUnit
+		mov		ent, eax
+		add		esp, 10h
+	}
+	
+	if(ent == NULL) return v8::Null();
+
+	return GetEntityWrapper(ent)->GetWrapper(GetPluginRunning());
 END

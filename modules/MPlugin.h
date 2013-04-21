@@ -14,13 +14,14 @@ public:
 
 	FUNCTION_DECL(isSandboxed);
 	FUNCTION_DECL(loadPlugin);
-
+	FUNCTION_DECL(exists);
 
 	WRAPPED_CLS(MPlugin, SMJS_Module) {
 		temp->SetClassName(v8::String::New("PluginModule"));
 
 		WRAPPED_FUNC(isSandboxed);
 		WRAPPED_FUNC(loadPlugin);
+		WRAPPED_FUNC(exists);
 	}
 
 	

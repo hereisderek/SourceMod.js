@@ -17,6 +17,7 @@ IServerPluginCallbacks *vsp_interface;
 IServerTools *serverTools;
 SourceMod::ISDKTools *sdkTools;
 SourceMod::IBinTools *binTools;
+IGameConfig *sdkToolsConf = NULL;
 
 bool SMJS_InitInterfaces(ISmmAPI *ismm, char *error, size_t maxlen, bool late){
 	GET_V_IFACE_CURRENT(GetServerFactory, serverClients, IServerGameClients, INTERFACEVERSION_SERVERGAMECLIENTS);
@@ -40,7 +41,15 @@ bool SMJS_InitInterfaces(ISmmAPI *ismm, char *error, size_t maxlen, bool late){
 		return false;
 	}
 
+	
+
 	return true;
+}
+
+bool SMJS_LoadConfs(char *error, size_t maxlength, bool late){
+	if (!gameconfs->LoadGameConfigFile("sdktools.games", &sdkToolsConf, error, maxlength)){
+		return false;
+	}
 }
 
 void SMJS_InitLateInterfaces(){

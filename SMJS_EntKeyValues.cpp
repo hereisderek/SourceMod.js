@@ -26,17 +26,22 @@ v8::Handle<v8::Value> SMJS_EntKeyValues::GetKeyValue(v8::Local<v8::String> prop,
 	Local<Value> _intfld = info.This()->GetInternalField(0); 
 	SMJS_EntKeyValues *self = dynamic_cast<SMJS_EntKeyValues*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
 
-	char tmp[128];
+	// This whole function is a workaround
+
+	unsigned char tmp[128];
+	tmp[0] = tmp[1] = tmp[2] = tmp[3] = 0;
+
 	v8::String::AsciiValue propStr(prop);
 
-	if(!serverTools->GetKeyValue(self->entWrapper->ent, *propStr, &tmp[0], sizeof(tmp))){
+	if(!serverTools->GetKeyValue(self->entWrapper->ent, *propStr, (char*)tmp, sizeof(tmp))){
 		return v8::Undefined();
 	}
 
-	if(tmp[0] != '\0'){
+	if(tmp[1] != 0 && tmp[2] != 0 && tmp[3] != 0){
 		auto value = *((char**) tmp);
 		return v8::String::New(value);
 	}
+	
 	return v8::Undefined();
 }
 

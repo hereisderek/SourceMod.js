@@ -34,6 +34,9 @@ public:
 
 	FUNCTION_DECL(isValid);
 	FUNCTION_DECL(getClassname);
+	FUNCTION_DECL(input);
+	FUNCTION_DECL(removeEdict);
+	FUNCTION_DECL(setData);
 
 	WRAPPED_CLS(SMJS_Entity, SMJS_BaseWrapped) {
 		temp->SetClassName(v8::String::New("Entity"));
@@ -45,6 +48,9 @@ public:
 
 		WRAPPED_FUNC(isValid);
 		WRAPPED_FUNC(getClassname);
+		WRAPPED_FUNC(input);
+		WRAPPED_FUNC(removeEdict);
+		WRAPPED_FUNC(setData);
 	}
 
 private:

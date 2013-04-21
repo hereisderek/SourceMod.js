@@ -29,6 +29,7 @@ public:
 };
 
 void SMJS_Init();
+void SMJS_Ping();
 
 extern v8::Isolate *mainIsolate;
 

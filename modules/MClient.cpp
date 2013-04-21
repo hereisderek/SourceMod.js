@@ -97,7 +97,6 @@ bool OnClientConnect(edict_t *pEntity, const char *pszName, const char *pszAddre
 bool OnClientConnect_Post(edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen){
 	auto client = clients[gamehelpers->IndexOfEdict(pEntity)];
 	client->connected = true;
-	client->ReattachEntity();
 	self->CallGlobalFunctionWithWrapped("OnClientConnected", client);
 	return true;
 }

@@ -71,8 +71,10 @@ ConCommand jsCmd("js", CmdJS, "SourceMod.js");
 std::vector<std::string> trustedPlugins;
 
 bool SMJS::SDK_OnLoad(char *error, size_t maxlength, bool late){
-	sharesys->AddDependency(myself, "sdktools.ext", false, true);
-	sharesys->AddDependency(myself, "bintools.ext", false, true);
+	sharesys->AddDependency(myself, "sdktools.ext", true, true);
+	sharesys->AddDependency(myself, "bintools.ext", true, true);
+
+	if(!SMJS_LoadConfs(error, maxlength, late)) return false;
 
 	v8::V8::Initialize();
 	SMJS_Init();
