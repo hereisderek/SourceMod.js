@@ -10,6 +10,10 @@
 #include "toolframework/itoolentity.h"
 #include "ISDKTools.h"
 #include "IBinTools.h"
+#include <IGameConfigs.h>
+
+
+using namespace SourceMod;
 
 extern IVEngineServer *engine;
 extern IServerGameDLL *gamedll;
@@ -27,8 +31,10 @@ extern IEngineSound *enginesound;
 // extern IServerPluginHelpers *serverpluginhelpers;
 extern IServerPluginCallbacks *vsp_interface;
 extern IServerTools *serverTools;
-extern SourceMod::ISDKTools *sdkTools;
-extern SourceMod::IBinTools *binTools;
+extern ISDKTools *sdkTools;
+extern IBinTools *binTools;
+extern IGameConfig *sdkToolsConf;
 
 bool SMJS_InitInterfaces(ISmmAPI *ismm, char *error, size_t maxlen, bool late);
 void SMJS_InitLateInterfaces();
+bool SMJS_LoadConfs(char *error, size_t maxlength, bool late);

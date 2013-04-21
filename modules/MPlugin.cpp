@@ -25,3 +25,9 @@ FUNCTION_M(MPlugin::loadPlugin)
 	PSTR(dir);
 	return v8::Boolean::New(LoadPlugin(*dir) != NULL);
 END
+
+
+FUNCTION_M(MPlugin::exists)
+	PSTR(dir);
+	return v8::Boolean::New(SMJS_Plugin::GetPluginByDir(*dir) != NULL);
+END

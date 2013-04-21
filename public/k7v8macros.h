@@ -52,7 +52,7 @@ using namespace v8;
 #define ARGC                           args.Length()
 #define ARG_COUNT(c)                   if ( args.Length() != c ) { \
 	return ThrowException(v8::String::New("Insufficient arguments")); } 
-#define ARG_BETWEEN(a,b)               if ( a <= args.Length() <= b ) {} 
+#define ARG_BETWEEN(a,b)               if (args.Length() < a || args.Length() > b ) THROW("Invalid number of parameters"); 
 #define ARG_int(n,c)                   int n=(int)(args[c]->Int32Value())
 #define ARG_str(v,i)                   v8::String::AsciiValue v(args[i]);
 #define ARG_utf8(v,i)                  v8::String::Utf8Value  v(args[i])

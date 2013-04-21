@@ -68,6 +68,7 @@ void MGame::OnGameFrame(bool simulating){
 }
 
 void MGame::OnThink(bool finalTick){
+	SMJS_Ping();
 	MSocket::OnThink(finalTick);
 }
 

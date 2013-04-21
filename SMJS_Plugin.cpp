@@ -226,8 +226,16 @@ bool SMJS_Plugin::LoadFile(const char* file, bool asGlobal){
 	rewind(fileHandle);
 	
 	char* source = new char[size + 1];
-	for (size_t i = 0; i < size;) {
+	size_t i = 0;
+	while(i < size) {
 		i += fread(&source[i], 1, size - i, fileHandle);
+		if(ferror(fileHandle)){
+			printf("Error reading file %s\n", path);
+			perror(NULL);
+			fclose(fileHandle);
+			delete[] source;
+			return false;
+		}
 	}
 	source[size] = '\0';
 	fclose(fileHandle);

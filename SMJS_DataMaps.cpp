@@ -23,6 +23,14 @@ v8::Handle<v8::Value> SMJS_DataMaps::SGetDataMap(v8::Local<v8::String> prop, con
 	switch(desc->fieldType){
 		case FIELD_INTEGER: return v8::Int32::New(*(int32_t *)((intptr_t)ent + desc->fieldOffset));
 		case FIELD_FLOAT:  return v8::Number::New(*(float *)((intptr_t)ent + desc->fieldOffset));
+
+		case FIELD_STRING:
+		case FIELD_MODELNAME:
+		case FIELD_SOUNDNAME: {
+				string_t idx = *(string_t *)((intptr_t)ent + desc->fieldOffset);
+				return v8::String::New((idx == NULL_STRING) ? "" : STRING(idx));
+		} break;
+
 		default: THROW("Unsupported datamap type");
 	}
 }
@@ -50,6 +58,13 @@ v8::Handle<v8::Value> SMJS_DataMaps::SSetDataMap(v8::Local<v8::String> prop, v8:
 		case FIELD_FLOAT:
 			*(float *)((intptr_t) ent + desc->fieldOffset) = (float) value->ToNumber()->NumberValue();
 		break;
+		case FIELD_STRING:
+		case FIELD_MODELNAME:
+		case FIELD_SOUNDNAME:
+			{
+				v8::String::Utf8Value str(value);
+				strncpy((char *)((intptr_t)ent + desc->fieldOffset), *str, desc->fieldSize);
+			} break;
 		default: THROW("Unsupported datamap type");
 	}
 

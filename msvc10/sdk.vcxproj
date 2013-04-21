@@ -473,7 +473,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>Ws2_32.lib;WINMM.LIB;interfaces.lib;tier0.lib;tier1.debug.lib;vstdlib.lib;v8_base.lib;v8_snapshot.lib;clsocket.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;WINMM.LIB;interfaces.lib;tier0.lib;tier1.debug.lib;vstdlib.lib;v8_base.ia32.lib;v8_snapshot.lib;clsocket.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -503,7 +503,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>Ws2_32.lib;WINMM.LIB;interfaces.lib;tier0.lib;tier1.lib;vstdlib.lib;v8_base.lib;v8_snapshot.lib;clsocket.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Ws2_32.lib;WINMM.LIB;interfaces.lib;tier0.lib;tier1.lib;vstdlib.lib;v8_base.ia32.lib;v8_snapshot.lib;clsocket.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - Old Metamod|Win32'">

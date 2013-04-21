@@ -16,12 +16,6 @@
 				"windows"	"\x55\x8B\xEC\x83\xE4\xF8\x83\xEC\x0C\x83******\x53\x56\x57\x89\x4C\x24\x14\x74*\x8B\xB1\x08\x02\x00\x00\x8B\xC6\x85\xF6\x75"
 			}
 			
-			"GetValueForLevel"
-			{
-				"library"	"server"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x08\x56\x8B\x75\x08\x83\xFE\xFF\x75*\x8B*****\x4E\x83\xFE\xFF\x0F*****\x51"
-			}
-			
 			/*
 				void *__thiscall PlayerPickHero(void *this, int a2, const char *a3)
 				
@@ -34,6 +28,18 @@
 			{
 				"library"	"server"
 				"windows"	"\x55\x8B\xEC\x51\x53\x56\x8B*****\x57\x89\x75\xFC\x85\xC9\x74*\x8B\x01\x8B\x50\x08\xFF\xD2\x8B\x18\xEB*\x83\xCB\xFF"
+			}
+			
+			
+			/*
+				CBaseEntity* __usercall CreateUnit<eax>(const char *clsname<eax>, int player, signed int team, char bNoMouse, signed int alwaysZero)
+				
+				Function called inside the "dota_create_unit" concmd dispatch
+			*/
+			"CreateUnit"
+			{
+				"library"	"server"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x18\x53\x56\x57\x8B\xF8\x33\xC0\x38*****\xC6\x45\xFF\x00\x0F\x95\xC0\x8B******\x85\xC0"
 			}
 		}
 	}

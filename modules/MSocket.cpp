@@ -129,10 +129,11 @@ FUNCTION_M(MSocket::create)
 END
 
 FUNCTION_M(MSocket::createBuffer)
-PINT(len);
+	PINT(len);
 	auto buffer = CreateBuffer(GetPluginRunning()->GetIsolate(), new uint8_t[len], len);
-	FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
-	return buffer;
+	v8::Handle<v8::Value> ret = buffer;
+	//FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
+	return ret;
 END
 
 void MSocket::OnGameFrame(bool simulating){
@@ -147,7 +148,7 @@ void MSocket::OnGameFrame(bool simulating){
 		HandleScope handle_scope(pl->GetIsolate());
 		Context::Scope context_scope(context);
 
-		int received = socket.Receive(4096);
+		int received = socket.Receive(256);
 		if(socket.IsSocketValid() && received != 0){
 			if(!jssocket->connected) jssocket->connected = true;
 			do{
@@ -167,21 +168,23 @@ void MSocket::OnGameFrame(bool simulating){
 				
 				
 				auto callback = jssocket->GetWrapper()->ToObject()->Get(v8::String::New("onData"));
-
+				if(callback.IsEmpty() || callback->IsNull()) continue;
 				if(callback->IsFunction()){
+					auto func = callback.As<v8::Function>();
+					if(func.IsEmpty()) continue;
+
 					uint8_t *ptr = new uint8_t[received];
 					auto buffer = CreateBuffer(pl->GetIsolate(), ptr, received);
 					memcpy(ptr, socket.GetData(), received);
 					ptr[received] = '\0';
-
-					auto func = v8::Handle<v8::Function>::Cast(callback);
 					
-					v8::Handle<v8::Value> arg = buffer;
-					func->Call(context->Global(), 1, &arg);
+					v8::Handle<v8::Value> args[1];
+					args[0] = buffer;
+					func->Call(context->Global(), 1, args);
 
 					FreeBuffer(pl->GetIsolate(), buffer);
 				}
-			}while((received = socket.Receive(4096)) != 0);
+			}while((received = socket.Receive(256)) != 0);
 		}else if(jssocket->connected){
 			jssocket->connected = false;
 
@@ -253,16 +256,22 @@ FUNCTION_M(BufferMerge)
 	uint8_t *otherPtr = (uint8_t*) v8::Handle<v8::External>::Cast(other->GetHiddenValue(v8::String::New("SMJS::bufferPtr")))->Value();
 	int otherBufLen = other->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value();
 
+	if(offset > bufLen + otherBufLen){
+		THROW("Buffer overflow");
+	}
+
 	uint8_t *merged = new uint8_t[bufLen + otherBufLen];
 	memcpy(merged, ptr, bufLen);
 	memcpy((void*)((intptr_t)merged + offset), otherPtr, otherBufLen);
-
-	delete[] ptr;
+	
+	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(bufLen + otherBufLen), ReadOnly);
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtr"), v8::External::New(merged));
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtrLen"), v8::Int32::New(bufLen + otherBufLen));
 	buffer->SetIndexedPropertiesToExternalArrayData(merged, v8::kExternalUnsignedByteArray, bufLen + otherBufLen);
 
 	GetPluginRunning()->GetIsolate()->AdjustAmountOfExternalAllocatedMemory(otherBufLen);
+
+	delete[] ptr;
 
 	RETURN_UNDEF;
 END
@@ -275,14 +284,7 @@ FUNCTION_M(BufferRewind)
 	
 	if(amount >= bufLen) RETURN_UNDEF;
 
-	uint8_t *cur = (uint8_t*)((intptr_t) ptr + amount);
-	uint8_t *end = (uint8_t*)((intptr_t) ptr + bufLen);
-	int i = 0;
-	while(cur != end){
-		*cur++ = ptr[amount + i];
-		++i;
-	}
-
+	memmove(ptr, (uint8_t*)((intptr_t) ptr + amount), bufLen - amount);
 	RETURN_UNDEF;
 END
 

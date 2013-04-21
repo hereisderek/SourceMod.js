@@ -125,6 +125,7 @@ public:
 	FUNCTION_DECL(heroIdToClassname);
 	FUNCTION_DECL(loadParticleFile);
 	FUNCTION_DECL(forceWin);
+	FUNCTION_DECL(createUnit);
 	
 
 	WRAPPED_CLS(MDota, SMJS_Module) {
@@ -133,11 +134,13 @@ public:
 		WRAPPED_FUNC(heroIdToClassname);
 		WRAPPED_FUNC(loadParticleFile);
 		WRAPPED_FUNC(forceWin);
+		WRAPPED_FUNC(createUnit);
 
 		proto->Set(v8::String::New("TEAM_NONE"), v8::Int32::New(0), v8::ReadOnly);
 		proto->Set(v8::String::New("TEAM_SPEC"), v8::Int32::New(1), v8::ReadOnly);
 		proto->Set(v8::String::New("TEAM_RADI"), v8::Int32::New(2), v8::ReadOnly);
 		proto->Set(v8::String::New("TEAM_DIRE"), v8::Int32::New(3), v8::ReadOnly);
+		proto->Set(v8::String::New("TEAM_NEUTRAL"), v8::Int32::New(4), v8::ReadOnly);
 
 		proto->Set(v8::String::New("TEAM_RADIANT"), v8::Int32::New(2), v8::ReadOnly);
 
@@ -784,8 +787,7 @@ public:
 		HERO_ID_CONST(BOUND_FORM_OF_NECROLIC, Visage);
 
 
-		//Other
-		HERO_ID_CONST(JESUS, Omniknight);
+		// Other
 		HERO_ID_CONST(GANDALF, KeeperOfTheLight);
 		HERO_ID_CONST(BATHROOM, SpiritBreaker);
 		HERO_ID_CONST(SHINY_HORSE_MAN, Leshrac);
