@@ -50,6 +50,8 @@ bool SMJS_LoadConfs(char *error, size_t maxlength, bool late){
 	if (!gameconfs->LoadGameConfigFile("sdktools.games", &sdkToolsConf, error, maxlength)){
 		return false;
 	}
+
+	return true;
 }
 
 void SMJS_InitLateInterfaces(){

@@ -289,7 +289,7 @@ FUNCTION_M(MDota::heroIdToClassname)
 	PINT(id);
 	auto ret = HeroIdToClassname(id);
 	if(ret == NULL) return v8::Null();
-	return v8::String::New(ret);
+	RETURN_SCOPED(v8::String::New(ret));
 END
 
 FUNCTION_M(MDota::forceWin)
@@ -301,7 +301,7 @@ FUNCTION_M(MDota::forceWin)
 	cmd->RemoveFlags(FCVAR_CHEAT);
 	engine->ServerCommand("dota_kill_buildings\n");
 
-	return v8::True();
+	RETURN_UNDEF;
 END
 
 FUNCTION_M(MDota::createUnit)
@@ -322,5 +322,5 @@ FUNCTION_M(MDota::createUnit)
 	
 	if(ent == NULL) return v8::Null();
 
-	return GetEntityWrapper(ent)->GetWrapper(GetPluginRunning());
+	RETURN_SCOPED(GetEntityWrapper(ent)->GetWrapper(GetPluginRunning()));
 END

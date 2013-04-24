@@ -6,7 +6,7 @@ SIMPLE_WRAPPED_CLS_CPP(SMJS_ConVar, SMJS_SimpleWrapped);
 
 FUNCTION_M(SMJS_ConVar::getName)
 	GET_INTERNAL(SMJS_ConVar*, self);
-	return v8::String::New(self->cv->GetName());
+	RETURN_SCOPED(v8::String::New(self->cv->GetName()));
 END
 
 Handle<Value> SMJS_ConVar::GetFlags(Local<String> prop, const AccessorInfo& info){
@@ -29,22 +29,22 @@ void SMJS_ConVar::SetFlags(Local<String> prop, Local<Value> value, const Accesso
 
 FUNCTION_M(SMJS_ConVar::getBool)
 	GET_INTERNAL(SMJS_ConVar*, self);
-	return v8::Boolean::New(self->cv->GetBool());
+	RETURN_SCOPED(v8::Boolean::New(self->cv->GetBool()));
 END
 
 FUNCTION_M(SMJS_ConVar::getInt)
 	GET_INTERNAL(SMJS_ConVar*, self);
-	return v8::Int32::New(self->cv->GetInt());
+	RETURN_SCOPED(v8::Int32::New(self->cv->GetInt()));
 END
 
 FUNCTION_M(SMJS_ConVar::getNumber)
 	GET_INTERNAL(SMJS_ConVar*, self);
-	return v8::Number::New(self->cv->GetFloat());
+	RETURN_SCOPED(v8::Number::New(self->cv->GetFloat()));
 END
 
 FUNCTION_M(SMJS_ConVar::getString)
 	GET_INTERNAL(SMJS_ConVar*, self);
-	return v8::String::New(self->cv->GetString());
+	RETURN_SCOPED(v8::String::New(self->cv->GetString()));
 END
 
 FUNCTION_M(SMJS_ConVar::setBool)

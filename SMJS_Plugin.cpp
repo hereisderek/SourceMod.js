@@ -133,7 +133,7 @@ std::vector<v8::Persistent<v8::Function>>* SMJS_Plugin::GetEventPostHooks(char c
 	return GetEventHooks(type);
 }
 
-bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal){
+bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal, v8::Handle<v8::Value> *result){
 	HandleScope handle_scope(isolate);
 	Context::Scope context_scope(context);
 
@@ -143,10 +143,20 @@ bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal)
 	if(asGlobal){
 		script = Script::Compile(v8::String::New(source), &origin);
 	}else{
-		char *buffer = new char[strlen(source) + 100];
-		strcpy(buffer, "(function(global){");
+		char *buffer = new char[strlen(source) + 200];
+		strcpy(buffer,
+		"(function(){\
+			var exports = {};\
+			(function(exports){\
+		");
+
 		strcat(buffer, source);
-		strcat(buffer, "})(this);");
+
+		strcat(buffer,
+			"})(exports);\
+			return exports;\
+		})();");
+
 		script = Script::Compile(v8::String::New(buffer), &origin);
 		delete buffer;
 	}
@@ -156,11 +166,13 @@ bool SMJS_Plugin::RunString(const char* name, const char *source, bool asGlobal)
 		ReportException(&try_catch);
 		return false;
 	} else {
-		Handle<Value> result = script->Run();
-		if (result.IsEmpty()) {
+		v8::Handle<v8::Value> res = script->Run();
+		if (res.IsEmpty()) {
 			ReportException(&try_catch);
 			return false;
 		}
+		
+		if(result != NULL) *result = handle_scope.Close(res);
 
 		return true;
 	}
@@ -208,9 +220,7 @@ void SMJS_Plugin::ReportException(TryCatch* try_catch){
 	fprintf(stderr, "--------------------------------------------------------------------------------");
 }
 
-bool SMJS_Plugin::LoadFile(const char* file, bool asGlobal){
-	HandleScope handle_scope(isolate);
-	
+bool SMJS_Plugin::LoadFile(const char* file, bool asGlobal, v8::Handle<v8::Value> *result){
 	char path[512];
 #if WIN32
 	snprintf(path, sizeof(path), "%s\\%s", GetPath(), file);
@@ -240,7 +250,7 @@ bool SMJS_Plugin::LoadFile(const char* file, bool asGlobal){
 	source[size] = '\0';
 	fclose(fileHandle);
 
-	bool res = RunString(path, source, asGlobal);
+	bool res = RunString(path, source, asGlobal, result);
 	delete[] source;
 	return res;
 }
@@ -295,13 +305,16 @@ FUNCTION(JSN_Require)
 	ARG_str(filename, 0);
 
 	if(strstr(*filename, "../") != NULL || strstr(*filename, "..\\") != NULL){
-		return v8::ThrowException(v8::Exception::Error(v8::String::New("Invalid file path")));
+		THROW("Invalid file path");
 	}
 
 	SMJS_Plugin *plugin = GetPluginRunning();
-	if(!plugin->LoadFile(*filename, false)){
-		return v8::ThrowException(v8::Exception::Error(v8::String::New("Failed to load file")));
+
+	v8::Handle<v8::Value> res;
+
+	if(!plugin->LoadFile(*filename, false, &res)){
+		THROW("Failed to load file");
 	}
 
-	return v8::Undefined();
+	RETURN_SCOPED(res);
 END

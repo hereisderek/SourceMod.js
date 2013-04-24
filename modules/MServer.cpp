@@ -15,7 +15,7 @@ FUNCTION_M(MServer::print)
 	buffer[len + 1] = '\0';
 
 	META_CONPRINT(buffer);
-	return JS_undefined;
+	RETURN_UNDEF;
 END
 
 FUNCTION_M(MServer::command)
@@ -31,7 +31,7 @@ FUNCTION_M(MServer::command)
 	buffer[len + 1] = '\0';
 
 	engine->ServerCommand(buffer);
-	return JS_undefined;
+	RETURN_UNDEF;
 END
 
 FUNCTION_M(MServer::execute)
@@ -39,21 +39,21 @@ FUNCTION_M(MServer::execute)
 	
 	ARG_COUNT(0);
 	engine->ServerExecute();
-	return JS_undefined;
+	RETURN_UNDEF;
 END
 
 FUNCTION_M(MServer::getPort)
 	ARG_COUNT(0);
 	auto cvar = icvar->FindVar("hostport");
 	if(cvar == NULL) return JS_undefined;
-	return v8::Int32::New(cvar->GetInt());
+	RETURN_SCOPED(v8::Int32::New(cvar->GetInt()));
 END
 
 FUNCTION_M(MServer::getIP)
 	ARG_COUNT(0);
 	auto cvar = icvar->FindVar("ip");
 	if(cvar == NULL) return JS_undefined;
-	return v8::String::New(cvar->GetString());
+	RETURN_SCOPED(v8::String::New(cvar->GetString()));
 END
 
 FUNCTION_M(MServer::userIdToClient)
@@ -61,7 +61,7 @@ FUNCTION_M(MServer::userIdToClient)
 	int client = playerhelpers->GetClientOfUserId(userid);
 	if(client <= 0) return v8::Null();
 	if(clients[client] == NULL) return v8::Null();
-	return clients[client]->GetWrapper(GetPluginRunning());
+	RETURN_SCOPED(clients[client]->GetWrapper(GetPluginRunning()));
 END
 
 FUNCTION_M(MServer::changeMap)
@@ -82,12 +82,12 @@ FUNCTION_M(MServer::changeMap)
 END
 
 FUNCTION_M(MServer::getMap)
-	return v8::String::New(gamehelpers->GetCurrentMap());
+	RETURN_SCOPED(v8::String::New(gamehelpers->GetCurrentMap()));
 END
 
 FUNCTION_M(MServer::isMapValid)
 	PSTR(mapName);
-	return v8::Boolean::New(gamehelpers->IsMapValid(*mapName));
+	RETURN_SCOPED(v8::Boolean::New(gamehelpers->IsMapValid(*mapName)));
 END
 
 FUNCTION_M(MServer::log)
@@ -110,7 +110,7 @@ public:
 	}
 
 	static v8::Handle<v8::Value> GetClient(uint32_t index, const AccessorInfo& info){
-		if(index >= MAXCLIENTS) return v8::Undefined();
+		if(index >= MAXCLIENTS) RETURN_UNDEF;
 		if(index == 0) return v8::Null();
 		if(clients[index] == NULL) return v8::Null();
 		return clients[index]->GetWrapper(GetPluginRunning());

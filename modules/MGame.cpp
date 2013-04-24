@@ -280,7 +280,7 @@ FUNCTION_M(MGame::getTeamClientCount)
 	SendProp *pProp = gamehelpers->FindInSendTable(g_Teams[teamindex].ClassName, "\"player_array\"");
 	ArrayLengthSendProxyFn fn = pProp->GetArrayLengthProxy();
 
-	return v8::Int32::New(fn(g_Teams[teamindex].pEnt, 0));
+	RETURN_SCOPED(v8::Int32::New(fn(g_Teams[teamindex].pEnt, 0)));
 END
 
 FUNCTION_M(MGame::precacheModel)
@@ -293,7 +293,7 @@ FUNCTION_M(MGame::precacheModel)
 	}
 
 
-	return v8::Integer::New(engine->PrecacheModel(*str, preload));
+	RETURN_SCOPED(v8::Integer::New(engine->PrecacheModel(*str, preload)));
 END
 
 FUNCTION_M(MGame::findEntityByClassname)
@@ -311,7 +311,7 @@ FUNCTION_M(MGame::findEntityByClassname)
 		return v8::Null();
 	}
 
-	return GetEntityWrapper(ent)->GetWrapper(GetPluginRunning());
+	RETURN_SCOPED(GetEntityWrapper(ent)->GetWrapper(GetPluginRunning()));
 END
 
 FUNCTION_M(MGame::findEntitiesByClassname)
@@ -324,7 +324,7 @@ FUNCTION_M(MGame::findEntitiesByClassname)
 	int lastIndex = -1;
 
 	CBaseEntity *pEntity = (CBaseEntity *)serverTools->FirstEntity();
-	if (!pEntity) return arr;
+	if (!pEntity) RETURN_SCOPED(arr);
 	const char *classname;
 
 	int lastletterpos = strlen(searchname) - 1;
@@ -356,11 +356,11 @@ FUNCTION_M(MGame::findEntitiesByClassname)
 		pEntity = (CBaseEntity *)serverTools->NextEntity(pEntity);
 	}
 
-	return arr;
+	RETURN_SCOPED(arr);
 END
 
 FUNCTION_M(MGame::getTime)
-	return v8::Number::New(gpGlobals->curtime);
+	RETURN_SCOPED(v8::Number::New(gpGlobals->curtime));
 END
 
 FUNCTION_M(MGame::hookEvent)
@@ -375,7 +375,7 @@ FUNCTION_M(MGame::hookEvent)
 	
 	if (!gameevents->FindListener(self, *name)){
 		if (!gameevents->AddListener(self, *name, true)){
-			return v8::Boolean::New(false);
+			RETURN_SCOPED(v8::Boolean::New(false));
 		}
 	}
 
@@ -386,5 +386,23 @@ FUNCTION_M(MGame::hookEvent)
 		plugin->GetEventHooks(*name)->push_back(v8::Persistent<v8::Function>::New(callback));
 	}
 
-	return v8::Boolean::New(true);
+	RETURN_SCOPED(v8::Boolean::New(true));
+END
+
+void pauseGame(){
+	SMJS_Pause();
+	v8::V8::RemoveCallCompletedCallback(pauseGame);
+}
+
+FUNCTION_M(MGame::pause)
+	if(GetPluginRunning()->isSandboxed) THROW("This function is not allowed to be called in sandboxed plugins");
+	v8::V8::AddCallCompletedCallback(pauseGame);
+	
+	RETURN_UNDEF;
+END
+
+FUNCTION_M(MGame::resume)
+	if(GetPluginRunning()->isSandboxed) THROW("This function is not allowed to be called in sandboxed plugins");
+	SMJS_Resume();
+	RETURN_UNDEF;
 END

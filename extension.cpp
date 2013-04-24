@@ -59,12 +59,12 @@ bool FindAndRunPlugins();
 bool FindAndRunAutoloadPlugins();
 bool LoadTrustedList();
 
-void CmdJS(const CCommand &command);
-void CmdLoadPlugin(const CCommand &command);
-void CmdUnloadPlugin(const CCommand &command);
-void CmdReloadPlugin(const CCommand &command);
+void CmdJS(void *pUnknown, const CCommand &command);
+void CmdLoadPlugin(void *pUnknown, const CCommand &command);
+void CmdUnloadPlugin(void *pUnknown, const CCommand &command);
+void CmdReloadPlugin(void *pUnknown, const CCommand &command);
 
-void RegCommand(const char *cmdName, void(*func)(const CCommand&));
+void RegCommand(const char *cmdName, void(*func)(void*, const CCommand&));
 
 ConCommand jsCmd("js", CmdJS, "SourceMod.js");
 
@@ -242,11 +242,11 @@ SMJS_Plugin *LoadPlugin(const char *dir){
 	return plugin;
 }
 
-void CmdJS(const CCommand &command){
+void CmdJS(void *pUnknown, const CCommand &command){
 
 }
 
-void CmdLoadPlugin(const CCommand &command){
+void CmdLoadPlugin(void *pUnknown, const CCommand &command){
 	if(command.ArgC() != 2){
 		META_CONPRINT("Usage: js_load [plugin_dir]\n");
 		return;
@@ -266,7 +266,7 @@ void CmdLoadPlugin(const CCommand &command){
 	}
 }
 
-void CmdUnloadPlugin(const CCommand &command){
+void CmdUnloadPlugin(void *pUnknown, const CCommand &command){
 	if(command.ArgC() != 2){
 		META_CONPRINT("Usage: js_unload [plugin_dir]\n");
 		return;
@@ -282,18 +282,18 @@ void CmdUnloadPlugin(const CCommand &command){
 	META_CONPRINTF("Plugin \"%s\" unloaded successfully!\n", command.Arg(1));
 }
 
-void CmdReloadPlugin(const CCommand &command){
+void CmdReloadPlugin(void *pUnknown, const CCommand &command){
 	if(command.ArgC() != 2){
 		META_CONPRINT("Usage: js_reload [plugin_dir]\n");
 		return;
 	}
 
-	CmdUnloadPlugin(command);
-	CmdLoadPlugin(command);
+	CmdUnloadPlugin(pUnknown, command);
+	CmdLoadPlugin(pUnknown, command);
 	
 }
 
-void RegCommand(const char *cmdName, void(*func)(const CCommand&)){
+void RegCommand(const char *cmdName, void(*func)(void*, const CCommand&)){
 	ConCommand *conCmd = icvar->FindCommand(cmdName);
 	if(!conCmd){
 		conCmd = new ConCommand(cmdName, func);

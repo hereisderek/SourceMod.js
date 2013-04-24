@@ -6,25 +6,25 @@ WRAPPED_CLS_CPP(SMJS_Event, SMJS_BaseWrapped);
 FUNCTION_M(SMJS_Event::getBool)
 	GET_INTERNAL(SMJS_Event*, self);
 	PSTR(name);
-	return v8::Boolean::New(self->ev->GetBool(*name));
+	RETURN_SCOPED(v8::Boolean::New(self->ev->GetBool(*name)));
 END
 
 FUNCTION_M(SMJS_Event::getInt)
 	GET_INTERNAL(SMJS_Event*, self);
 	PSTR(name);
-	return v8::Int32::New(self->ev->GetInt(*name));
+	RETURN_SCOPED(v8::Int32::New(self->ev->GetInt(*name)));
 END
 
 FUNCTION_M(SMJS_Event::getFloat)
 	GET_INTERNAL(SMJS_Event*, self);
 	PSTR(name);
-	return v8::Number::New(self->ev->GetFloat(*name));
+	RETURN_SCOPED(v8::Number::New(self->ev->GetFloat(*name)));
 END
 
 FUNCTION_M(SMJS_Event::getString)
 	GET_INTERNAL(SMJS_Event*, self);
 	PSTR(name);
-	return v8::String::New(self->ev->GetString(*name));
+	RETURN_SCOPED(v8::String::New(self->ev->GetString(*name)));
 END
 
 FUNCTION_M(SMJS_Event::getUint64)
@@ -35,7 +35,7 @@ FUNCTION_M(SMJS_Event::getUint64)
 	auto arr = v8::Array::New(2);
 	arr->Set(0, v8::Number::New(v & 0xFFFFFFFF));
 	arr->Set(1, v8::Number::New(v >> 32));
-	return arr;
+	RETURN_SCOPED(arr);
 END
 
 FUNCTION_M(SMJS_Event::setBool)

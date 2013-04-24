@@ -71,14 +71,14 @@ void SMJS_Entity::OnWrapperAttached(SMJS_Plugin *plugin, v8::Persistent<v8::Valu
 
 FUNCTION_M(SMJS_Entity::isValid)
 	GET_INTERNAL(SMJS_Entity*, self);
-	return v8::Boolean::New(self->valid);
+	RETURN_SCOPED(v8::Boolean::New(self->valid));
 END
 
 FUNCTION_M(SMJS_Entity::getClassname)
 	GET_INTERNAL(SMJS_Entity*, self);
 	if(!self->valid) THROW("Invalid entity");
 	
-	return v8::String::New(gamehelpers->GetEntityClassname(self->ent));
+	RETURN_SCOPED(v8::String::New(gamehelpers->GetEntityClassname(self->ent)));
 END
 
 FUNCTION_M(SMJS_Entity::input)
@@ -202,7 +202,7 @@ FUNCTION_M(SMJS_Entity::input)
 	
 	bool ret;
 	g_pAcceptInput->Execute(vstk, &ret);
-	return v8::Boolean::New(ret);
+	RETURN_SCOPED(v8::Boolean::New(ret));
 END
 
 FUNCTION_M(SMJS_Entity::removeEdict)

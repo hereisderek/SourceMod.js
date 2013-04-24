@@ -44,25 +44,25 @@ END
 FUNCTION_M(SMJS_Client::isInGame)
 	GET_INTERNAL(SMJS_Client*, self);
 	if(!self->valid) return v8::Boolean::New(false);
-	return v8::Boolean::New(self->inGame);
+	RETURN_SCOPED(v8::Boolean::New(self->inGame));
 END
 
 FUNCTION_M(SMJS_Client::isFake)
 	GET_INTERNAL(SMJS_Client*, self);
 	if(self->edict == NULL) THROW("Invalid edict");
-	return v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsFakeClient());
+	RETURN_SCOPED(v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsFakeClient()));
 END
 
 FUNCTION_M(SMJS_Client::isReplay)
 	GET_INTERNAL(SMJS_Client*, self);
 	if(self->edict == NULL) THROW("Invalid edict");
-	return v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsReplay());
+	RETURN_SCOPED(v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsReplay()));
 END
 
 FUNCTION_M(SMJS_Client::isSourceTV)
 	GET_INTERNAL(SMJS_Client*, self);
 	if(self->edict == NULL) THROW("Invalid edict");
-	return v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsSourceTV());
+	RETURN_SCOPED(v8::Boolean::New(playerhelpers->GetGamePlayer(self->edict)->IsSourceTV()));
 END
 
 FUNCTION_M(SMJS_Client::fakeCommand)
@@ -76,7 +76,7 @@ END
 FUNCTION_M(SMJS_Client::getAuthString)
 	GET_INTERNAL(SMJS_Client*, self);
 	if(self->edict == NULL) THROW("Invalid edict");
-	return v8::String::New(engine->GetPlayerNetworkIDString(self->edict));
+	RETURN_SCOPED(v8::String::New(engine->GetPlayerNetworkIDString(self->edict)));
 END
 
 FUNCTION_M(SMJS_Client::kick)

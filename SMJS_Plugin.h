@@ -65,8 +65,8 @@ public: // Public functions
 	virtual std::vector<v8::Persistent<v8::Function>>* GetEventPostHooks(char const *type);
 	// 
 
-	bool RunString(const char* name, const char *source, bool asGlobal);
-	bool LoadFile(const char* file, bool asGlobal);
+	bool RunString(const char* name, const char *source, bool asGlobal, v8::Handle<v8::Value> *result = NULL);
+	bool LoadFile(const char* file, bool asGlobal, v8::Handle<v8::Value> *result = NULL);
 	void LoadModules();
 
 	void CheckApi();

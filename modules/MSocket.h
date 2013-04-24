@@ -17,14 +17,17 @@ public:
 
 	FUNCTION_DECL(create);
 	FUNCTION_DECL(createBuffer);
+	FUNCTION_DECL(getStringLength);
 
 	WRAPPED_CLS(MSocket, SMJS_Module) {
 		temp->SetClassName(v8::String::New("SocketModule"));
 		
 		WRAPPED_FUNC(create);
 		WRAPPED_FUNC(createBuffer);
+		WRAPPED_FUNC(getStringLength);
 	}
 
+	static void Process();
 	static void OnThink(bool finalTick);
 	static void OnGameFrame(bool simulating);
 };

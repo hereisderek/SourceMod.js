@@ -31,6 +31,9 @@ public:
 void SMJS_Init();
 void SMJS_Ping();
 
+void SMJS_Pause();
+void SMJS_Resume();
+
 extern v8::Isolate *mainIsolate;
 
 

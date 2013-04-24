@@ -84,9 +84,9 @@ private:
 	bool InvokePluginsCommand(const CCommand &command);
 	bool InvokePluginsCommand(int client, int argc, const char **argArray, const char *argString);
 
-	static void CommandCallback(const CCommand &command);
-	static void CommandCallback2(const CCommand &command);
+	static void CommandCallback(void *pUnknown, const CCommand &command);
+	static void CommandCallback2(void *pUnknown, const CCommand &command);
 	static void AddCommand(SMJS_Plugin *pl, const char *cmdName, v8::Handle<v8::Function> func, bool serverOnly);
-	static void OnSayCommand_Pre(const CCommand &command);
-	static void OnSayCommand_Post(const CCommand &command);
+	static void OnSayCommand_Pre(void *pUnknown, const CCommand &command);
+	static void OnSayCommand_Post(void *pUnknown, const CCommand &command);
 };

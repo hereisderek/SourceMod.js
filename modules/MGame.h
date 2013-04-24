@@ -31,6 +31,9 @@ public:
 	FUNCTION_DECL(getTime);
 	FUNCTION_DECL(hookEvent);
 
+	FUNCTION_DECL(pause);
+	FUNCTION_DECL(resume);
+
 	WRAPPED_CLS(MGame, SMJS_Module) {
 		temp->SetClassName(v8::String::New("GameModule"));
 		
@@ -43,6 +46,9 @@ public:
 		WRAPPED_FUNC(findEntitiesByClassname);
 		WRAPPED_FUNC(getTime);
 		WRAPPED_FUNC(hookEvent);
+
+		WRAPPED_FUNC(pause);
+		WRAPPED_FUNC(resume);
 	}
 
 private:

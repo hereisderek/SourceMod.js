@@ -84,11 +84,11 @@ void VectorSetter(Local<String> prop, Local<Value> value, const AccessorInfo& in
 	
 	Vector *vec = (Vector*)data->addr;
 	if(prop == v8::String::New("x")){
-		vec->x = value->ToNumber()->NumberValue();
+		vec->x = value->NumberValue();
 	}else if(prop == v8::String::New("y")){
-		vec->y = value->ToNumber()->NumberValue();
+		vec->y = value->NumberValue();
 	}else if(prop == v8::String::New("z")){
-		vec->z = value->ToNumber()->NumberValue();
+		vec->z = value->NumberValue();
 	}
 
 	if(data->edict != NULL) gamehelpers->SetEdictStateChanged(data->edict, data->actual_offset);
@@ -98,9 +98,9 @@ v8::Handle<v8::Value> VectorToString(const v8::Arguments& args) {
 	char buffer[256];
 	auto t = args.This();
 	snprintf(buffer, sizeof(buffer), "[Vector %f %f %f]",
-		(float) t->Get(v8::String::New("x"))->ToNumber()->NumberValue(),
-		(float) t->Get(v8::String::New("y"))->ToNumber()->NumberValue(),
-		(float) t->Get(v8::String::New("z"))->ToNumber()->NumberValue()
+		(float) t->Get(v8::String::New("x"))->NumberValue(),
+		(float) t->Get(v8::String::New("y"))->NumberValue(),
+		(float) t->Get(v8::String::New("z"))->NumberValue()
 	);
 	return v8::String::New(buffer);
 }
@@ -139,8 +139,7 @@ bool SMJS_Netprops::GetEntityPropInfo(void *ent, const char *propName, sm_sendpr
 }
 
 v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(v8::Local<v8::String> prop, const v8::AccessorInfo &info){
-	Local<Value> _intfld = info.This()->GetInternalField(0); 
-	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
+	SMJS_Netprops *self = (SMJS_Netprops*) Handle<External>::Cast(info.This()->GetInternalField(0))->Value();
 
 	if(!self->entWrapper->valid) return v8::Undefined();
 
@@ -175,8 +174,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(v8::Local<v8::String> prop, con
 
 
 v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(v8::Local<v8::String> prop, v8::Local<v8::Value> value, const v8::AccessorInfo &info){
-	Local<Value> _intfld = info.This()->GetInternalField(0); 
-	SMJS_Netprops *self = dynamic_cast<SMJS_Netprops*>((SMJS_BaseWrapped*)Handle<External>::Cast(_intfld)->Value());
+	SMJS_Netprops *self = (SMJS_Netprops*) Handle<External>::Cast(info.This()->GetInternalField(0))->Value();
 
 	if(!self->entWrapper->valid) return v8::Undefined();
 	
@@ -208,7 +206,9 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, edict_t *edict, Send
 
 
 	switch(p->GetType()){
-	case DPT_Int: {
+	case DPT_Int:
+	case DPT_Int64:
+	{
 		// If it's an integer with 21 bits and starts with m_h, it MUST be an entity, if it's not...
 		//  oh well... return an integer
 		if(bit_count == 21 && strlen(propNameStdString.c_str()) >= 3 && std::strncmp(propNameStdString.c_str(), "m_h", 3) == 0){
@@ -232,7 +232,7 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, edict_t *edict, Send
 		}
 		
 		if (bit_count < 1){
-			*(int32_t * )addr = value->ToInt32()->Int32Value();
+			*(int32_t * )addr = value->Int32Value();
 		}else if (bit_count > 32){
 			if(!value->IsArray()) THROW("Value must be an array");
 			auto obj = value->ToObject();
@@ -242,31 +242,32 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, edict_t *edict, Send
 			auto lowBits = obj->Get(0);
 			auto highBits = obj->Get(1);
 			
-			if(!lowBits->IsInt32() || !highBits->IsInt32()) THROW("Value must be an array with 2 int32 elements");
+			if(!lowBits->IsNumber() || !highBits->IsNumber()) THROW("Value must be an array with 2 numberic elements");
 
+			printf("%d %d\n", lowBits->Uint32Value(), highBits->Uint32Value());
 
 			*(uint32_t * )addr = lowBits->Uint32Value();
-			*(uint32_t * )((intptr_t) addr + 4) = highBits->ToInt32()->Uint32Value();
+			*(uint32_t * )((intptr_t) addr + 4) = highBits->Uint32Value();
 		}else if (bit_count >= 17){
-			*(int32_t * )addr = value->ToInt32()->Int32Value();
+			*(int32_t * )addr = value->Int32Value();
 		}else if (bit_count >= 9){
 			if (is_unsigned){
-				*(uint16_t * )addr = value->ToInt32()->Int32Value();
+				*(uint16_t * )addr = value->Int32Value();
 			}else{
-				*(int16_t * )addr = value->ToInt32()->Int32Value();
+				*(int16_t * )addr = value->Int32Value();
 			}
 		}else if (bit_count >= 2){
 			if (is_unsigned){
-				*(uint8_t * )addr = value->ToInt32()->Int32Value();
+				*(uint8_t * )addr = value->Int32Value();
 			}else{
-				*(int8_t * )addr = value->ToInt32()->Int32Value();
+				*(int8_t * )addr = value->Int32Value();
 			}
 		}else{
 			*(bool *)addr = value->BooleanValue();
 		}
 	}; break;
 	case DPT_Float:
-		*(float*)addr = (float) value->ToNumber()->NumberValue();
+		*(float*)addr = (float) value->NumberValue();
 		break;
 	case DPT_Vector: {
 		auto obj = value->ToObject();
@@ -290,8 +291,12 @@ v8::Handle<v8::Value> SMJS_Netprops::SSetNetProp(void *ent, edict_t *edict, Send
 
 	case DPT_String: {
 		int maxlen = DT_MAX_STRING_BUFFERSIZE;
-		v8::String::AsciiValue param1(value->ToString());
-		strncopy((char*)addr, *param1, maxlen);
+		v8::String::Utf8Value param1(value->ToString());
+
+		char *LEAK_FIX_ME = new char[maxlen];
+		
+		strncopy(LEAK_FIX_ME, *param1, maxlen);
+		*(char **)addr = LEAK_FIX_ME;
 	}; break;
 
 	default: THROW("Invalid Netprop Type");
@@ -311,7 +316,9 @@ v8::Handle<v8::Value> SMJS_Netprops::SGetNetProp(void *ent, edict_t *edict, Send
 	if(isCacheable != NULL) *isCacheable = false;
 
 	switch(p->GetType()){
-	case DPT_Int: {
+	case DPT_Int:
+	case DPT_Int64:
+	{
 		int v;
 		// If it's an integer with 21 bits and starts with m_h, it MUST be an entity, if it's not...
 		//  oh well... return an integer

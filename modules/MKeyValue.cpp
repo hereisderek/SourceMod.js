@@ -23,7 +23,7 @@ FUNCTION_M(MKeyValue::parseKVFile)
 	PSTR(filename);
 	//if(strstr(*filename, "../") != NULL || strstr(*filename, "..\\") != NULL){
 	if(strstr(*filename, "/") != NULL || strstr(*filename, "\\") != NULL){
-		return v8::ThrowException(v8::Exception::Error(v8::String::New("Invalid file path")));
+		THROW("Invalid file path");
 	}
 
 	SMJS_Plugin *pl = GetPluginRunning();
@@ -51,12 +51,12 @@ FUNCTION_M(MKeyValue::parseKVFile)
 
 	auto res = ParseKeyValue(source);
 	delete source;
-	return res;
+	RETURN_SCOPED(res);
 END
 
 FUNCTION_M(MKeyValue::parse)
 	PSTR(str);
-	return ParseKeyValue(*str);
+	RETURN_SCOPED(ParseKeyValue(*str));
 END
 
 v8::Handle<v8::Value> ParseKeyValue(const char *str){

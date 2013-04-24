@@ -72,7 +72,7 @@ public:
 };
 
 void MSocket::OnThink(bool finalTick){
-	OnGameFrame(false);
+	Process();
 }
 
 SIMPLE_WRAPPED_CLS_CPP(JSSocket, SMJS_SimpleWrapped);
@@ -89,7 +89,7 @@ FUNCTION_M(JSSocket::connectW)
 	self->used = true;
 	auto res = self->socket.Open((const uint8*) *hostname, port);
 	self->connected = res;
-	return v8::Boolean::New(res);
+	RETURN_SCOPED(v8::Boolean::New(res));
 END
 
 FUNCTION_M(JSSocket::writeString)
@@ -97,7 +97,7 @@ FUNCTION_M(JSSocket::writeString)
 	ARG_COUNT(1);
 	PSTR(str);
 	
-	return v8::Int32::New(self->socket.Send((uint8*) *str, str.length()));
+	RETURN_SCOPED(v8::Int32::New(self->socket.Send((uint8*) *str, str.length())));
 END
 
 FUNCTION_M(JSSocket::writeBuffer)
@@ -110,7 +110,7 @@ FUNCTION_M(JSSocket::writeBuffer)
 	if(h.IsEmpty()) THROW("Object is not a buffer");
 	uint8_t *ptr = (uint8_t*) v8::Handle<v8::External>::Cast(h)->Value();
 	
-	return v8::Int32::New(self->socket.Send(ptr, min(len, obj->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value())));
+	RETURN_SCOPED(v8::Int32::New(self->socket.Send(ptr, min(len, obj->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value()))));
 END
 
 FUNCTION_M(JSSocket::close)
@@ -119,24 +119,34 @@ FUNCTION_M(JSSocket::close)
 
 	auto res = self->socket.Close();
 	self->connected = !res;
-	return v8::Boolean::New(res);
+	RETURN_SCOPED(v8::Boolean::New(res));
 END
 
 /////////////
 
 FUNCTION_M(MSocket::create)
-	return (new JSSocket(GetPluginRunning()))->GetWrapper();
+	RETURN_SCOPED((new JSSocket(GetPluginRunning()))->GetWrapper());
 END
 
 FUNCTION_M(MSocket::createBuffer)
 	PINT(len);
 	auto buffer = CreateBuffer(GetPluginRunning()->GetIsolate(), new uint8_t[len], len);
 	v8::Handle<v8::Value> ret = buffer;
-	//FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
-	return ret;
+	FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
+	RETURN_SCOPED(ret);
+END
+
+FUNCTION_M(MSocket::getStringLength)
+	ARG_COUNT(1);
+	if(!args[0]->IsString()) THROW("Argument must be a string");
+	RETURN_SCOPED(v8::Int32::New(args[0]->ToString()->Utf8Length()));
 END
 
 void MSocket::OnGameFrame(bool simulating){
+	Process();
+}
+
+void MSocket::Process(){
 	for(auto it = g_MSocket->sockets.begin(); it != g_MSocket->sockets.end(); ++it){
 		auto jssocket = *it;
 		auto &socket = jssocket->socket;
@@ -147,6 +157,8 @@ void MSocket::OnGameFrame(bool simulating){
 		auto context = pl->GetContext();
 		HandleScope handle_scope(pl->GetIsolate());
 		Context::Scope context_scope(context);
+
+		auto obj = jssocket->GetWrapper()->ToObject();
 
 		int received = socket.Receive(256);
 		if(socket.IsSocketValid() && received != 0){
@@ -160,30 +172,31 @@ void MSocket::OnGameFrame(bool simulating){
 
 						if(callback->IsFunction()){
 							auto func = v8::Handle<v8::Function>::Cast(callback);
-							func->Call(context->Global(), 0, NULL);
+							func->Call(obj, 0, NULL);
 						}
 					}
 					break;
 				}
 				
 				
-				auto callback = jssocket->GetWrapper()->ToObject()->Get(v8::String::New("onData"));
-				if(callback.IsEmpty() || callback->IsNull()) continue;
-				if(callback->IsFunction()){
-					auto func = callback.As<v8::Function>();
-					if(func.IsEmpty()) continue;
+				auto callback = obj->Get(v8::String::New("onData"));
+				if(callback.IsEmpty() || callback->IsNull() || !callback->IsFunction()) continue;
 
-					uint8_t *ptr = new uint8_t[received];
-					auto buffer = CreateBuffer(pl->GetIsolate(), ptr, received);
-					memcpy(ptr, socket.GetData(), received);
-					ptr[received] = '\0';
+				auto func = v8::Handle<v8::Function>::Cast(callback);
+
+				Assert(func->IsFunction()); // Weird stuff
+
+				uint8_t *ptr = new uint8_t[received];
+				auto buffer = CreateBuffer(pl->GetIsolate(), ptr, received);
+				memcpy(ptr, socket.GetData(), received);
+				ptr[received] = '\0';
 					
-					v8::Handle<v8::Value> args[1];
-					args[0] = buffer;
-					func->Call(context->Global(), 1, args);
+				v8::Handle<v8::Value> args[1];
+				args[0] = buffer;
+				func->Call(obj, 1, args);
 
-					FreeBuffer(pl->GetIsolate(), buffer);
-				}
+				FreeBuffer(pl->GetIsolate(), buffer);
+
 			}while((received = socket.Receive(256)) != 0);
 		}else if(jssocket->connected){
 			jssocket->connected = false;
@@ -192,7 +205,7 @@ void MSocket::OnGameFrame(bool simulating){
 
 			if(callback->IsFunction()){
 				auto func = v8::Handle<v8::Function>::Cast(callback);
-				func->Call(context->Global(), 0, NULL);
+				func->Call(obj, 0, NULL);
 			}
 		}
 	}
@@ -222,7 +235,7 @@ FUNCTION_M(BufferWriteString)
 	}
 
 	memcpy(ptr + offset, *str, str.length());
-	return v8::Int32::New(str.length());
+	RETURN_SCOPED(v8::Int32::New(str.length()));
 END
 
 FUNCTION_M(BufferReadString)
@@ -234,7 +247,7 @@ FUNCTION_M(BufferReadString)
 	int bufLen = buffer->GetHiddenValue(v8::String::New("SMJS::bufferPtrLen"))->Int32Value();
 	if(offset + len >= bufLen) len -= bufLen - offset - len;
 
-	return v8::String::New((char*)(ptr + offset), len);
+	RETURN_SCOPED(v8::String::New((char*)(ptr + offset), len));
 END
 
 FUNCTION_M(BufferMerge)
@@ -264,7 +277,7 @@ FUNCTION_M(BufferMerge)
 	memcpy(merged, ptr, bufLen);
 	memcpy((void*)((intptr_t)merged + offset), otherPtr, otherBufLen);
 	
-	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(bufLen + otherBufLen), ReadOnly);
+	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(bufLen + otherBufLen), v8::ReadOnly);
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtr"), v8::External::New(merged));
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtrLen"), v8::Int32::New(bufLen + otherBufLen));
 	buffer->SetIndexedPropertiesToExternalArrayData(merged, v8::kExternalUnsignedByteArray, bufLen + otherBufLen);
@@ -295,7 +308,7 @@ v8::Persistent<v8::Object> CreateBuffer(v8::Isolate *isolate, uint8_t *ptr, size
 	buffer->Set(v8::String::New("rewind"), v8::FunctionTemplate::New(BufferRewind)->GetFunction());
 	buffer->Set(v8::String::New("readString"), v8::FunctionTemplate::New(BufferReadString)->GetFunction());
 	buffer->Set(v8::String::New("writeString"), v8::FunctionTemplate::New(BufferWriteString)->GetFunction());
-	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(len), ReadOnly);
+	buffer->ForceSet(v8::String::New("length"), v8::Int32::New(len), v8::ReadOnly);
 	buffer->SetIndexedPropertiesToExternalArrayData(ptr, v8::kExternalUnsignedByteArray, len);
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtr"), v8::External::New(ptr));
 	buffer->SetHiddenValue(v8::String::New("SMJS::bufferPtrLen"), v8::Int32::New(len));

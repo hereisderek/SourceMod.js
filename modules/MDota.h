@@ -136,6 +136,8 @@ public:
 		WRAPPED_FUNC(forceWin);
 		WRAPPED_FUNC(createUnit);
 
+		proto->Set(v8::String::New("MAX_PLAYERS"), v8::Int32::New(24), v8::ReadOnly);
+
 		proto->Set(v8::String::New("TEAM_NONE"), v8::Int32::New(0), v8::ReadOnly);
 		proto->Set(v8::String::New("TEAM_SPEC"), v8::Int32::New(1), v8::ReadOnly);
 		proto->Set(v8::String::New("TEAM_RADI"), v8::Int32::New(2), v8::ReadOnly);
