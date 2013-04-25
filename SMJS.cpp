@@ -140,6 +140,8 @@ void SMJS_Resume(){
 		pingMutex->Unlock();
 		return;
 	}
+
+	lastPing = time(NULL);
 	isPaused = false;
 	pingMutex->Unlock();
 }

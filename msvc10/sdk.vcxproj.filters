@@ -110,6 +110,9 @@
     <ClCompile Include="..\SMJS_Event.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\modules\MEngine.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\extension.h">
@@ -237,6 +240,9 @@
     </ClInclude>
     <ClInclude Include="..\SMJS_Event.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\modules\MEngine.h">
+      <Filter>Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

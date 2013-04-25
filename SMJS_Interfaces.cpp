@@ -11,6 +11,7 @@ SourceHook::CallClass<IServerGameDLL> *gamedllPatch;
 IUniformRandomStream *engrandom;
 IPlayerInfoManager *playerinfo;
 IBaseFileSystem *basefilesystem;
+IFileSystem *filesystem;
 IEngineSound *enginesound;
 // IServerPluginHelpers *serverpluginhelpers;
 IServerPluginCallbacks *vsp_interface;
@@ -31,6 +32,9 @@ bool SMJS_InitInterfaces(ISmmAPI *ismm, char *error, size_t maxlen, bool late){
 
 	/* :TODO: Make this optional and... make it find earlier versions [?] */
 	GET_V_IFACE_CURRENT(GetServerFactory, playerinfo, IPlayerInfoManager, INTERFACEVERSION_PLAYERINFOMANAGER);
+
+	GET_V_IFACE_CURRENT(GetFileSystemFactory, filesystem, IFileSystem, FILESYSTEM_INTERFACE_VERSION);
+	
 
 	gpGlobals = ismm->GetCGlobals();
 

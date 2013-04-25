@@ -38,6 +38,7 @@ void SMJS_Entity::SetEntity(CBaseEntity *ent){
 		return;
 	}
 
+	this->valid = false;
 	if(ent == NULL) return;
 
 	this->ent = ent;

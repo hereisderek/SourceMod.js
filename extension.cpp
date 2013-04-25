@@ -43,6 +43,7 @@
 #include "modules/MEntities.h"
 #include "modules/MKeyValue.h"
 #include "modules/MDota.h"
+#include "modules/MEngine.h"
 #include "metamod.h"
 #include "SMJS_Interfaces.h"
 
@@ -109,7 +110,11 @@ void SMJS::SDK_OnAllLoaded(){
 }
 
 bool SMJS::SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlength, bool late){
-	return SMJS_InitInterfaces(ismm, error, maxlength, late);
+	bool res = SMJS_InitInterfaces(ismm, error, maxlength, late);
+	if(res){
+		SMJS_AddModule(new MEngine());
+	}
+	return res;
 }
 
 bool LoadTrustedList(){

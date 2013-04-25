@@ -14,9 +14,10 @@ SH_DECL_HOOK3_void(IServerGameDLL, ServerActivate, SH_NOATTRIB, 0, edict_t *, in
 SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
 SH_DECL_HOOK2(IGameEventManager2, FireEvent, SH_NOATTRIB, 0, bool, IGameEvent *, bool);
 
+
 WRAPPED_CLS_CPP(MGame, SMJS_Module)
 
-struct TeamInfo{
+struct TeamInfo {
 	const char *ClassName;
 	CBaseEntity *pEnt;
 };
@@ -149,6 +150,7 @@ bool MGame::OnFireEvent_Post(IGameEvent *pEvent, bool bDontBroadcast){
 	RETURN_META_VALUE(MRES_IGNORED, true);
 }
 
+
 bool FindNestedDataTable(SendTable *pTable, const char *name){
 	if (strcmp(pTable->GetName(), name) == 0){
 		return true;
@@ -174,7 +176,6 @@ void MGame::InitTeamNatives(){
 	g_Teams.resize(1);
 
 	int edictCount = gpGlobals->maxEntities;
-
 	for (int i=0; i<edictCount; i++){
 		edict_t *pEdict = gamehelpers->EdictOfIndex(i);
 		if (!pEdict || pEdict->IsFree()){
@@ -272,9 +273,7 @@ FUNCTION_M(MGame::getTeamClientCount)
 	PINT(teamindex);
 
 	if (teamindex >= (int)g_Teams.size() || !g_Teams[teamindex].ClassName){
-		char buffer[128];
-		snprintf(buffer, sizeof(buffer), "Team index %d is invalid", teamindex);
-		return v8::ThrowException(v8::Exception::Error(v8::String::New(buffer)));
+		THROW_VERB("Team index %d is invalid (d%d)", teamindex, teamindex >= (int)g_Teams.size() ? 0 : !!g_Teams[teamindex].ClassName);
 	}
 
 	SendProp *pProp = gamehelpers->FindInSendTable(g_Teams[teamindex].ClassName, "\"player_array\"");

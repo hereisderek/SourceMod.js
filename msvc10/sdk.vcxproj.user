@@ -8,7 +8,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LocalDebuggerCommandArguments>-game dota +map dota +developer 1 +maxplayers 10 -console +exec autoexec.cfg</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-game dota +map dota +developer 2 +maxplayers 10 -console +exec autoexec.cfg</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommand>C:\Users\Administrador\Desktop\dota 2 beta\srcds.exe</LocalDebuggerCommand>
   </PropertyGroup>

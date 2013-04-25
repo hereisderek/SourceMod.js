@@ -132,7 +132,7 @@ FUNCTION_M(MSocket::createBuffer)
 	PINT(len);
 	auto buffer = CreateBuffer(GetPluginRunning()->GetIsolate(), new uint8_t[len], len);
 	v8::Handle<v8::Value> ret = buffer;
-	FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
+	//FreeBuffer(GetPluginRunning()->GetIsolate(), buffer);
 	RETURN_SCOPED(ret);
 END
 
@@ -184,9 +184,7 @@ void MSocket::Process(){
 
 				auto func = v8::Handle<v8::Function>::Cast(callback);
 
-				Assert(func->IsFunction()); // Weird stuff
-
-				uint8_t *ptr = new uint8_t[received];
+				uint8_t *ptr = new uint8_t[received + 1];
 				auto buffer = CreateBuffer(pl->GetIsolate(), ptr, received);
 				memcpy(ptr, socket.GetData(), received);
 				ptr[received] = '\0';

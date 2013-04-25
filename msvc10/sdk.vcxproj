@@ -1211,6 +1211,7 @@
     <ClCompile Include="..\modules\MClient.cpp" />
     <ClCompile Include="..\modules\MConsole.cpp" />
     <ClCompile Include="..\modules\MDota.cpp" />
+    <ClCompile Include="..\modules\MEngine.cpp" />
     <ClCompile Include="..\modules\MEntities.cpp" />
     <ClCompile Include="..\modules\MGame.cpp" />
     <ClCompile Include="..\modules\MKeyValue.cpp" />
@@ -1244,6 +1245,7 @@
     <ClInclude Include="..\clsocket\SimpleSocket.h" />
     <ClInclude Include="..\clsocket\StatTimer.h" />
     <ClInclude Include="..\modules\MDota.h" />
+    <ClInclude Include="..\modules\MEngine.h" />
     <ClInclude Include="..\modules\MEntities.h" />
     <ClInclude Include="..\modules\MGame.h" />
     <ClInclude Include="..\modules\MKeyValue.h" />
