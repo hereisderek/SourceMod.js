@@ -41,6 +41,17 @@
 				"library"	"server"
 				"windows"	"\x55\x8B\xEC\x83\xEC\x18\x53\x56\x57\x8B\xF8\x33\xC0\x38*****\xC6\x45\xFF\x00\x0F\x95\xC0\x8B******\x85\xC0"
 			}
+			
+			/*
+				const char **__userpurge GetAbilityValue<eax>(int a1<eax>, const char *a2)
+				GetAbilityValue(v11, "movement_speed_reduction");
+				GetAbilityValue(v18, "attack_speed_reduction");
+			*/
+			"GetAbilityValue"
+			{
+				"library"	"server"
+				"windows"	"\x55\x8B\xEC\x83\xE4\xF8\x51\x53\x56\x8B\xF0\x83\xBE\x08\x04\x00\x00\x00"
+			}
 		}
 	}
 }

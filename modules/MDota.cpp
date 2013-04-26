@@ -12,9 +12,40 @@ IGameConfig *dotaConf = NULL;
 void *LoadParticleFile;
 void *CreateUnit;
 
+enum FieldType {
+	FT_Void = 0,
+	FT_Float = 1,
+	FT_Array = 4,
+	FT_Int = 5
+};
+
+struct AbilityData {
+	char *field;
+	char *strValue;
+	char *unknown;
+
+	struct {
+		int32_t		something;
+		FieldType	type; // FT_Array
+		uint32_t	flags;
+	} root;
+
+	struct {
+		union {
+			int32 asInt;
+			float asFloat;
+		} value;
+		uint32_t flags1; // EE FF EE FF (LE)
+
+		FieldType type;
+		uint32_t flags2; // EE FF EE FF (LE)
+	} values[12];
+};
+
 
 CDetour *parseUnitDetour;
 CDetour *playerPickHeroDetour;
+CDetour *getAbilityValueDetour;
 
 DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 	void *ret = DETOUR_MEMBER_CALL(ParseUnit)(a2, a3, a4);
@@ -29,6 +60,8 @@ DETOUR_DECL_MEMBER3(ParseUnit, void*, void*, a2, void*, a3, void*, a4){
 		Context::Scope context_scope(pl->GetContext());
 
 		auto hooks = pl->GetHooks("Dota_OnUnitParsed");
+
+		if(hooks->size() == 0) continue;
 
 		for(auto it = hooks->begin(); it != hooks->end(); ++it){
 			auto func = *it;
@@ -55,6 +88,9 @@ DETOUR_DECL_MEMBER2(PlayerPickHero, int, int, a1, char*, hero){
 		Context::Scope context_scope(pl->GetContext());
 
 		auto hooks = pl->GetHooks("Dota_OnHeroPicked");
+
+		if(hooks->size() == 0) continue;
+
 		v8::Handle<v8::Value> args = v8::String::New(hero);
 
 		for(auto it = hooks->begin(); it != hooks->end(); ++it){
@@ -70,49 +106,106 @@ DETOUR_DECL_MEMBER2(PlayerPickHero, int, int, a1, char*, hero){
 	return DETOUR_MEMBER_CALL(PlayerPickHero)(a1, hero);
 }
 
+void CallGetAbilityValueHook(CBaseEntity *ability, AbilityData *data){
+	auto clsname = gamehelpers->GetEntityClassname((CBaseEntity*) ability);
+	/*if(data->root.type != FT_Array){
+		printf("Unknown ability root data type: %s.%s %d\n", clsname, data->field, data->root.type);
+		return;
+	}*/
 
-void* GetValueForLevel_Actual = NULL;
-__declspec(naked) void* GetValueForLevel(void *a4){
-	static const char *str1 = "%p = %p\n";
-	const char *a1;
-	const char *ability;
-	void *output;
-	void *result;
+	
+	int len = GetNumPlugins();
+	for(int i = 0; i < len; ++i){
+		SMJS_Plugin *pl = GetPlugin(i);
+		if(pl == NULL) continue;
+		
+		HandleScope handle_scope(pl->GetIsolate());
+		Context::Scope context_scope(pl->GetContext());
+
+		auto hooks = pl->GetHooks("Dota_OnGetAbilityValue");
+
+		if(hooks->size() == 0) continue;
+
+		v8::Handle<v8::Value> args[3];
+		args[0] = v8::String::New(clsname);
+		args[1] = v8::String::New(data->field);
+
+		auto arr = v8::Array::New();
+		int len = -1;
+
+		for(int i=0;i<10;++i){
+			++len;
+			if(data->values[i].type == FT_Int){
+				arr->Set(i, v8::Int32::New(data->values[i].value.asInt));
+			}else if(data->values[i].type == FT_Float){
+				arr->Set(i, v8::Number::New(data->values[i].value.asFloat));
+			}else if(data->values[i].type == FT_Void){
+				break;
+			}else{
+				printf("Unknown ability data type: %s.%s %d\n", clsname, data->field, data->values[i].type);
+			}
+		}
+		
+
+		args[2] = arr;
+
+		for(auto it = hooks->begin(); it != hooks->end(); ++it){
+			auto func = *it;
+			auto ret = func->Call(pl->GetContext()->Global(), 3, args);
+			if(!ret.IsEmpty()){
+				if(!ret->IsArray()) continue;
+				auto obj = ret->ToObject();
+				if(obj->Get(v8::String::New("length"))->Int32Value() != len) continue;
+				for(int i=0;i<len;++i){
+					if(data->values[i].type == FT_Int){
+						data->values[i].value.asInt = (int) obj->Get(i)->NumberValue();
+					}else if(data->values[i].type == FT_Float){
+						data->values[i].value.asFloat = (float) obj->Get(i)->NumberValue();
+					}
+				}
+
+				return;
+			}
+		}
+	}
+}
+
+DETOUR_DECL_STATIC1_STDCALL_NAKED(GetAbilityValue, uint8_t *, char*, a2){
+	void *ability;
+	AbilityData *data;
+	int abilityLevel;
 
 	__asm {
 		push	ebp
 		mov		ebp, esp
-		sub		esp, 16
+		sub		esp, 64
 
-		mov		a1, eax
-		mov		ability, ecx
-		mov		output, edi
+		mov		ability, eax
 
-		push	[ebp + 8]
-		call	GetValueForLevel_Actual
-
-		mov		result, eax
-
+		mov		eax, a2
+		push	a2
 		mov		eax, ability
-		test	eax, eax
-		jz		end
+		call	GetAbilityValue_Actual
+		mov		data, eax
+	}
 
-		pushad
-		mov		eax, result
-		push	eax
-		mov		eax, ability
-		push	eax
-		push	str1
-		call	printf
-		add		esp, 0Ch
+	__asm pushad
+	__asm pushfd
+
+	if(ability == NULL || data == NULL || strlen(a2) == 0) goto FEND;
+	
+	abilityLevel = *(int*)((intptr_t)ability + 984) - 1;
+	
+	CallGetAbilityValueHook((CBaseEntity*) ability, data);
+	
+	
+FEND:
+	__asm{
+		popfd
 		popad
-
-end:
-		mov eax, result
-
-		mov esp, ebp
-		pop ebp
-		ret 4
+		mov		eax, data
+		leave
+		ret		4
 	}
 }
 
@@ -145,6 +238,16 @@ MDota::MDota(){
 	}
 	
 	playerPickHeroDetour->EnableDetour();
+
+	getAbilityValueDetour = DETOUR_CREATE_STATIC(GetAbilityValue, "GetAbilityValue");
+	if(!getAbilityValueDetour){
+		smutils->LogError(myself, "Unable to hook GetAbilityValue!");
+		return;
+	}
+	
+	getAbilityValueDetour->EnableDetour();
+
+	
 
 	if(!dotaConf->GetMemSig("LoadParticleFile", &LoadParticleFile) || LoadParticleFile == NULL){
 		smutils->LogError(myself, "Couldn't sigscan LoadParticleFile");

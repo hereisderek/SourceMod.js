@@ -60,6 +60,10 @@ ret name(p1type p1name)
 ret (__stdcall*name##_Actual)(p1type) = NULL; \
 ret __stdcall name(p1type p1name)
 
+#define DETOUR_DECL_STATIC1_STDCALL_NAKED(name, ret, p1type, p1name) \
+ret (__stdcall*name##_Actual)(p1type) = NULL; \
+__declspec(naked) ret name(p1type p1name)
+
 #define DETOUR_DECL_STATIC2(name, ret, p1type, p1name, p2type, p2name) \
 ret (*name##_Actual)(p1type, p2type) = NULL; \
 ret name(p1type p1name, p2type p2name)
